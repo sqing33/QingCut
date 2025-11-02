@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+celery
+redis
+sqlalchemy
+python-multipart
+aiofiles
+pydantic
+pydantic-settings
+python-jose[cryptography]
+passlib[bcrypt]
+pillow
+opencv-python
+ultralytics
+websockets
