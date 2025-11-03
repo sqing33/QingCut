@@ -1,0 +1,33 @@
+// 毛玻璃效果 mixin
+@mixin glass-panel {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+@mixin glass-panel-dark {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+@mixin glass-panel-light {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+.glass-panel {
+  @include glass-panel;
+}
+
+.glass-panel-dark {
+  @include glass-panel-dark;
+}
+
+.glass-panel-light {
+  @include glass-panel-light;
+}

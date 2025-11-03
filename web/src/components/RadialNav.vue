@@ -1,18 +1,8 @@
 <template>
   <div class="radial-nav-container">
     <!-- 中心按钮 -->
-    <button 
-      @click="toggleMenu" 
-      class="center-button"
-      :class="{ active: isMenuOpen }"
-    >
-      <svg 
-        class="icon" 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        stroke="currentColor" 
-        stroke-width="2"
-      >
+    <button @click="toggleMenu" class="center-button" :class="{ active: isMenuOpen }">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="10" />
         <line x1="12" y1="8" x2="12" y2="16" />
         <line x1="8" y1="12" x2="16" y2="12" />
@@ -40,11 +30,7 @@
 
     <!-- 背景遮罩 -->
     <transition name="fade">
-      <div 
-        v-if="isMenuOpen" 
-        class="backdrop" 
-        @click="closeMenu"
-      ></div>
+      <div v-if="isMenuOpen" class="backdrop" @click="closeMenu"></div>
     </transition>
   </div>
 </template>
@@ -62,8 +48,8 @@ const isMenuOpen = ref(false)
 
 const navItems: NavItem[] = [
   { label: '视频截取', path: '/capture', icon: '🎬' },
-  { label: '标注', path: '/annotate', icon: '✏️' },
   { label: '训练', path: '/train', icon: '🚀' },
+  { label: '数据', path: '/data', icon: '📊' },
   { label: '设置', path: '/settings', icon: '⚙️' },
 ]
 
@@ -75,16 +61,18 @@ const closeMenu = () => {
   isMenuOpen.value = false
 }
 
-// 计算导航项的圆形分布位置
 const getItemStyle = (index: number) => {
   const total = navItems.length
-  const angle = (360 / total) * index - 90 // -90 让第一个项从顶部开始
-  const radius = 120 // 圆形半径
-  
+  const startAngle = 180
+  const sweepAngle = 90
+
+  const angle = startAngle + (sweepAngle / (total - 1)) * index
+  const radius = 120
+
   const radian = (angle * Math.PI) / 180
   const x = Math.cos(radian) * radius
   const y = Math.sin(radian) * radius
-  
+
   return {
     transform: `translate(${x}px, ${y}px)`,
     transitionDelay: `${index * 50}ms`,
@@ -149,9 +137,12 @@ const getItemStyle = (index: number) => {
 
 .nav-items {
   position: absolute;
-  bottom: 30px;
-  right: 30px;
+  bottom: 0;
+  right: 0;
+  width: 60px;
+  height: 60px;
   z-index: 1001;
+  pointer-events: none;
 }
 
 .nav-item {
@@ -159,11 +150,12 @@ const getItemStyle = (index: number) => {
   bottom: 0;
   right: 0;
   transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  pointer-events: auto;
 }
 
 .nav-item-content {
-  width: 80px;
-  height: 80px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: linear-gradient(135deg, #4ade80, #10b981);
   display: flex;
@@ -184,7 +176,7 @@ const getItemStyle = (index: number) => {
 }
 
 .nav-icon {
-  font-size: 24px;
+  font-size: 16px;
 }
 
 .nav-label {
@@ -202,36 +194,5 @@ const getItemStyle = (index: number) => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-}
-
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .radial-nav-container {
-    bottom: 20px;
-    right: 20px;
-  }
-
-  .center-button {
-    width: 50px;
-    height: 50px;
-  }
-
-  .center-button .icon {
-    width: 24px;
-    height: 24px;
-  }
-
-  .nav-item-content {
-    width: 60px;
-    height: 60px;
-  }
-
-  .nav-icon {
-    font-size: 20px;
-  }
-
-  .nav-label {
-    font-size: 10px;
-  }
 }
 </style>

@@ -1,8 +1,8 @@
 <template>
   <div class="page">
     <div class="placeholder">
-      <h1>✏️ 标注功能</h1>
-      <p>即将推出</p>
+      <h1>📊 数据管理</h1>
+      <p>功能开发中，敬请期待</p>
     </div>
   </div>
 </template>
@@ -10,7 +10,7 @@
 <style scoped>
 .page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #fef3c7 0%, #d1fae5 100%);
+  background: linear-gradient(135deg, #e0f2fe 0%, #ddd6fe 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -28,7 +28,7 @@
 .placeholder h1 {
   font-size: 48px;
   margin-bottom: 20px;
-  background: linear-gradient(135deg, #ff8c42, #ffa500);
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

@@ -13,9 +13,9 @@ const router = createRouter({
       component: () => import('@/views/VideoCapturePage.vue'),
     },
     {
-      path: '/annotate',
-      name: 'annotate',
-      component: () => import('@/views/Annotate.vue'),
+      path: '/data',
+      name: 'data',
+      component: () => import('@/views/DataPage.vue'),
     },
     {
       path: '/train',
