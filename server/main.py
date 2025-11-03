@@ -276,6 +276,42 @@ async def get_frame_annotations(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/frames/{frame_filename}/annotations")
+async def update_frame_annotations(
+    frame_filename: str,
+    data: dict,
+    db: AsyncSession = Depends(get_db)
+):
+    """更新指定截图的标注数据"""
+    try:
+        # 查找截图
+        result = await db.execute(
+            select(Frame).where(Frame.filename == frame_filename)
+        )
+        frame = result.scalar_one_or_none()
+        
+        if not frame:
+            raise HTTPException(status_code=404, detail="截图不存在")
+        
+        # 更新标注数据
+        annotations = data.get("annotations", [])
+        frame.annotations = annotations
+        
+        await db.commit()
+        await db.refresh(frame)
+        
+        return {
+            "success": True,
+            "filename": frame.filename,
+            "annotations": frame.annotations
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/frames/{video_filename}")
 async def list_frames_by_video(
     video_filename: str,

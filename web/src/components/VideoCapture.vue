@@ -293,19 +293,16 @@
     </div>
 
     <!-- 图片预览模态框 -->
-    <div v-if="showPreview" class="modal modal-open" @click.self="closePreview">
-      <div class="modal-box max-w-4xl p-0 overflow-hidden">
-        <div class="relative">
-          <button
-            @click="closePreview"
-            class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 z-10 bg-base-100"
-          >
-            ✕
-          </button>
-          <canvas ref="previewCanvasRef" class="w-full"></canvas>
-        </div>
-      </div>
-    </div>
+    <ImagePreviewModal
+      :show="showPreview"
+      :image-url="previewImageUrl"
+      :image-info="previewFrameInfo"
+      :annotations="previewAnnotations"
+      :available-classes="allClasses"
+      :editable="true"
+      @close="closePreview"
+      @save="handleSaveAnnotations"
+    />
   </div>
 </template>
 
@@ -314,6 +311,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { API_BASE_URL } from '@/config'
 import ClassGroupManager from './ClassGroupManager.vue'
 import VideoList from './VideoList.vue'
+import ImagePreviewModal from './ImagePreviewModal.vue'
 
 interface Video {
   filename: string
@@ -338,7 +336,6 @@ interface Class {
 const videoRef = ref<HTMLVideoElement>()
 const canvasRef = ref<HTMLCanvasElement>()
 const videoWrapper = ref<HTMLDivElement>()
-const previewCanvasRef = ref<HTMLCanvasElement>()
 
 const isPlaying = ref(false)
 const isSelectionMode = ref(false)
@@ -1061,7 +1058,7 @@ const addAnnotation = () => {
   drawSelection()
 }
 
-// 保存所有标注
+// 保存所有标注 - 使用原始分辨率
 const saveAllAnnotations = async () => {
   if (!videoRef.value) return
 
@@ -1073,67 +1070,32 @@ const saveAllAnnotations = async () => {
   const videoWidth = videoRef.value.videoWidth
   const videoHeight = videoRef.value.videoHeight
 
-  // 1. 创建完整视频帧
-  const fullFrameCanvas = document.createElement('canvas')
-  fullFrameCanvas.width = videoWidth
-  fullFrameCanvas.height = videoHeight
-  const fullFrameCtx = fullFrameCanvas.getContext('2d')
-  if (!fullFrameCtx) return
+  // 创建原始分辨率的canvas
+  const canvas = document.createElement('canvas')
+  canvas.width = videoWidth
+  canvas.height = videoHeight
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
 
-  fullFrameCtx.drawImage(videoRef.value, 0, 0, videoWidth, videoHeight)
+  // 直接绘制原始视频帧，不进行缩放和填充
+  ctx.drawImage(videoRef.value, 0, 0, videoWidth, videoHeight)
 
-  // 2. 创建640x640的输出canvas
-  const finalCanvas = document.createElement('canvas')
-  finalCanvas.width = OUTPUT_SIZE
-  finalCanvas.height = OUTPUT_SIZE
-  const finalCtx = finalCanvas.getContext('2d')
-  if (!finalCtx) return
-
-  finalCtx.fillStyle = LETTERBOX_COLOR
-  finalCtx.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE)
-
-  // 3. 计算缩放
-  const scale = Math.min(OUTPUT_SIZE / videoWidth, OUTPUT_SIZE / videoHeight)
-  const scaledWidth = videoWidth * scale
-  const scaledHeight = videoHeight * scale
-  const offsetX = (OUTPUT_SIZE - scaledWidth) / 2
-  const offsetY = (OUTPUT_SIZE - scaledHeight) / 2
-
-  finalCtx.drawImage(fullFrameCanvas, offsetX, offsetY, scaledWidth, scaledHeight)
-
-  // 4. 计算所有标注的YOLO坐标
+  // 构建标注数据 - 使用原始坐标
   const annotations = currentAnnotations.value.map((ann) => {
     const box = ann.box
-    const scaledBoxX = offsetX + box.x * scale
-    const scaledBoxY = offsetY + box.y * scale
-    const scaledBoxWidth = box.width * scale
-    const scaledBoxHeight = box.height * scale
-
     return {
       class_id: ann.classId,
       class_name: ann.className,
-      original_box: {
+      box: {
         x: box.x,
         y: box.y,
         width: box.width,
         height: box.height,
       },
-      output_box: {
-        x: scaledBoxX,
-        y: scaledBoxY,
-        width: scaledBoxWidth,
-        height: scaledBoxHeight,
-      },
-      yolo_format: {
-        x_center: (scaledBoxX + scaledBoxWidth / 2) / OUTPUT_SIZE,
-        y_center: (scaledBoxY + scaledBoxHeight / 2) / OUTPUT_SIZE,
-        width: scaledBoxWidth / OUTPUT_SIZE,
-        height: scaledBoxHeight / OUTPUT_SIZE,
-      },
     }
   })
 
-  finalCanvas.toBlob(async (blob) => {
+  canvas.toBlob(async (blob) => {
     if (!blob) return
 
     const formData = new FormData()
@@ -1143,18 +1105,11 @@ const saveAllAnnotations = async () => {
       formData.append('video_filename', currentVideoFilename.value)
     }
 
-    // 添加所有标注数据
+    // 添加原始分辨率的标注数据
     formData.append(
       'annotations',
       JSON.stringify({
-        video_size: { width: videoWidth, height: videoHeight },
-        scaled_frame: {
-          x: offsetX,
-          y: offsetY,
-          width: scaledWidth,
-          height: scaledHeight,
-          scale: scale,
-        },
+        image_size: { width: videoWidth, height: videoHeight },
         annotations: annotations,
       }),
     )
@@ -1207,14 +1162,15 @@ const finishEditAnnotation = () => {
   ) {
     const selectedClass = displayedClasses.value.find((c) => c.id === selectedClassId.value)
     if (selectedClass) {
-      // 更新标注
-      currentAnnotations.value[editingAnnotationIndex.value] = {
-        box: { ...selectionRect.value },
-        classId: selectedClassId.value,
-        className: selectedClass.name,
-        color: selectedClass.color,
+      const annotation = currentAnnotations.value[editingAnnotationIndex.value]
+      if (annotation) {
+        // 更新标注
+        annotation.box = { ...selectionRect.value }
+        annotation.classId = selectedClassId.value
+        annotation.className = selectedClass.name
+        annotation.color = selectedClass.color
+        showMessage('标注编辑完成', 'success')
       }
-      showMessage('标注编辑完成', 'success')
     }
   }
 
@@ -1255,8 +1211,8 @@ const loadClasses = async () => {
     if (!response.ok) throw new Error('获取类名列表失败')
     const data = await response.json()
 
-    allClasses.value = data.all_classes
-    globalClasses.value = data.global_classes
+    allClasses.value = data.classes || []
+    globalClasses.value = data.classes || []
   } catch (error) {
     console.error('加载类名列表失败:', error)
     showMessage('加载类名列表失败', 'error')
@@ -1271,121 +1227,62 @@ const onVideoLoaded = () => {
 // 图片预览功能
 const showPreview = ref(false)
 const previewImageUrl = ref('')
-const previewImageData = ref<any>(null)
+const previewFrameInfo = ref<{ filename: string; path: string }>({ filename: '', path: '' })
+const previewAnnotations = ref<any[]>([])
 
 const previewFrame = async (frame: Frame) => {
   try {
-    console.log('开始预览图片:', frame.filename)
+    previewFrameInfo.value = {
+      filename: frame.filename,
+      path: frame.path || '',
+    }
 
-    // 先显示模态框
-    showPreview.value = true
+    previewImageUrl.value = `${API_BASE_URL}${frame.path || ''}`
 
     // 获取图片的标注数据
     const response = await fetch(`${API_BASE_URL}/api/frames/${frame.filename}/annotations`)
     if (response.ok) {
       const data = await response.json()
-      previewImageData.value = data
-      console.log('获取到标注数据:', data)
+      previewAnnotations.value = data.annotations || []
     } else {
-      previewImageData.value = null
-      console.log('没有标注数据')
+      previewAnnotations.value = []
     }
 
-    // 等待下一帧确保 DOM 已更新
-    await new Promise((resolve) => setTimeout(resolve, 0))
-
-    // 加载图片并绘制
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-
-    img.onload = () => {
-      console.log('图片加载成功, 尺寸:', img.width, 'x', img.height)
-
-      if (!previewCanvasRef.value) {
-        console.error('Canvas ref 不存在')
-        return
-      }
-
-      const canvas = previewCanvasRef.value
-      canvas.width = img.width
-      canvas.height = img.height
-
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        console.error('无法获取 canvas context')
-        return
-      }
-
-      // 绘制图片
-      ctx.drawImage(img, 0, 0)
-      console.log('图片已绘制到 canvas')
-
-      // 如果有标注数据，绘制标注框
-      if (
-        previewImageData.value?.annotations &&
-        Array.isArray(previewImageData.value.annotations)
-      ) {
-        console.log('开始绘制标注框, 数量:', previewImageData.value.annotations.length)
-
-        previewImageData.value.annotations.forEach((ann: any, index: number) => {
-          const box = ann.output_box
-          console.log(`标注 ${index}:`, box)
-
-          // 使用类名颜色或默认颜色
-          // 从所有可能的类名列表中查找
-          let color = '#00ff00'
-          const allClassLists = [groupClasses.value, globalClasses.value, allClasses.value]
-          for (const classList of allClassLists) {
-            if (classList && classList.length > 0) {
-              const classInfo = classList.find((c) => c.id === ann.class_id)
-              if (classInfo) {
-                color = classInfo.color
-                break
-              }
-            }
-          }
-
-          // 绘制矩形框
-          ctx.strokeStyle = color
-          ctx.lineWidth = 3
-          ctx.strokeRect(box.x, box.y, box.width, box.height)
-
-          // 绘制类名标签
-          ctx.fillStyle = color
-          ctx.font = 'bold 16px monospace'
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.8)'
-          ctx.shadowBlur = 4
-          const label = ann.class_name
-          const labelWidth = ctx.measureText(label).width
-          ctx.fillRect(box.x, box.y - 24, labelWidth + 12, 24)
-          ctx.fillStyle = '#ffffff'
-          ctx.fillText(label, box.x + 6, box.y - 6)
-          ctx.shadowBlur = 0
-        })
-
-        console.log('标注框绘制完成')
-      }
-    }
-
-    img.onerror = (e) => {
-      console.error('图片加载失败:', e)
-      showMessage('图片加载失败', 'error')
-      showPreview.value = false
-    }
-
-    img.src = `${API_BASE_URL}${frame.path}`
-    console.log('开始加载图片:', img.src)
+    showPreview.value = true
   } catch (error) {
     console.error('预览图片失败:', error)
     showMessage('加载图片失败', 'error')
-    showPreview.value = false
   }
 }
 
 const closePreview = () => {
   showPreview.value = false
   previewImageUrl.value = ''
-  previewImageData.value = null
+  previewAnnotations.value = []
+}
+
+const handleSaveAnnotations = async (annotations: any[]) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/frames/${previewFrameInfo.value.filename}/annotations`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ annotations }),
+      },
+    )
+
+    if (!response.ok) throw new Error('保存标注失败')
+
+    showMessage('标注已保存', 'success')
+    previewAnnotations.value = annotations
+    await loadFrames()
+  } catch (error) {
+    console.error('保存标注失败:', error)
+    showMessage('保存标注失败', 'error')
+  }
 }
 </script>
 
