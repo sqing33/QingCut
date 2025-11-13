@@ -43,3 +43,5 @@ train/frames
 train/labels
 *.mp4
 *.png
+
+dataset/*

@@ -40,6 +40,19 @@ class Video(Base):
     frames = relationship("Frame", back_populates="video", cascade="all, delete-orphan")
 
 
+class Dataset(Base):
+    """数据集表"""
+    __tablename__ = "datasets"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    identifier = Column(String, unique=True, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # 关系：一个数据集包含多个图片
+    frame_datasets = relationship("FrameDataset", back_populates="dataset", cascade="all, delete-orphan")
+
+
 class Frame(Base):
     """截图表"""
     __tablename__ = "frames"
@@ -49,6 +62,7 @@ class Frame(Base):
     path = Column(String, nullable=False)
     video_id = Column(Integer, ForeignKey("videos.id"), nullable=True)  # 允许为空（旧数据兼容）
     class_id = Column(Integer, ForeignKey("classes.id"), nullable=True)  # 关联的类名ID
+    dataset_identifier = Column(String, nullable=True, index=True)  # 所属数据集标识符（保留用于向后兼容）
     width = Column(Integer, default=640)
     height = Column(Integer, default=640)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -58,6 +72,22 @@ class Frame(Base):
     video = relationship("Video", back_populates="frames")
     # 关系：一个截图关联一个类名
     class_obj = relationship("Class")
+    # 关系：一个图片可以属于多个数据集
+    frame_datasets = relationship("FrameDataset", back_populates="frame", cascade="all, delete-orphan")
+
+
+class FrameDataset(Base):
+    """图片-数据集关联表（多对多）"""
+    __tablename__ = "frame_datasets"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    frame_id = Column(Integer, ForeignKey("frames.id", ondelete="CASCADE"), nullable=False)
+    dataset_id = Column(Integer, ForeignKey("datasets.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # 关系
+    frame = relationship("Frame", back_populates="frame_datasets")
+    dataset = relationship("Dataset", back_populates="frame_datasets")
 
 
 class ClassGroup(Base):
@@ -129,3 +159,11 @@ async def init_db():
     """创建所有表"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+
+# 导出所有公共接口
+__all__ = [
+    "Base", "engine", "AsyncSessionLocal", "init_db", "get_db",
+    "Video", "Frame", "Class", "ClassGroup", "ClassGroupItem",
+    "VideoClass", "Dataset", "FrameDataset"
+]
