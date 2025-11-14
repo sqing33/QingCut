@@ -37,7 +37,8 @@
     <div class="flex-1 flex flex-col p-4 overflow-hidden">
       <!-- 视频显示区域 -->
       <div
-        class="flex-1 glass-panel rounded-2xl shadow-xl overflow-hidden relative flex items-center justify-center mb-4"
+        class="flex-1 rounded-2xl shadow-xl overflow-hidden relative flex items-center justify-center mb-4 transition-colors duration-300"
+        :class="[isSelectionMode ? 'glass-panel-selection' : 'glass-panel']"
         ref="videoWrapper"
       >
         <!-- 空状态占位 -->
@@ -73,9 +74,33 @@
         <!-- 标注工具栏（框选模式下显示） -->
         <div
           v-if="isSelectionMode && selectionRect"
-          class="absolute top-4 right-4 bg-base-100 shadow-2xl rounded-lg p-3 border border-base-300 z-10"
+          class="absolute top-4 right-4 bg-base-100 shadow-2xl rounded-lg p-3 border border-base-300 z-10 max-w-xs"
         >
           <div class="flex flex-col gap-2">
+            <!-- 快速类名选择 -->
+            <div v-if="quickSelectClasses.length > 0" class="flex flex-col gap-1">
+              <label class="text-xs font-semibold">快速选择类名:</label>
+              <div class="grid grid-cols-2 gap-1">
+                <button
+                  v-for="cls in quickSelectClasses"
+                  :key="cls.id"
+                  @click="selectClass(cls.id)"
+                  class="btn btn-xs text-xs text-black truncate font-medium relative"
+                  :class="selectedClassId === cls.id ? 'btn-success border-success' : ''"
+                  :title="cls.name"
+                >
+                  <!-- 颜色指示器 -->
+                  <div
+                    class="absolute top-0 right-0 w-3 h-3 rounded-full border border-black/20"
+                    :style="{
+                      backgroundColor: cls.color,
+                    }"
+                  ></div>
+                  <span class="pr-4">{{ cls.name }}</span>
+                </button>
+              </div>
+            </div>
+
             <!-- 类名选择 -->
             <div class="flex items-center gap-2">
               <label class="text-xs font-semibold whitespace-nowrap">类名:</label>
@@ -145,7 +170,8 @@
           <div class="flex gap-2 flex-wrap">
             <button
               @click="toggleSelectionMode"
-              class="btn btn-sm btn-warning gap-2"
+              class="btn btn-sm gap-2"
+              :class="isSelectionMode ? 'btn-error' : 'btn-warning'"
               :disabled="!videoUrl"
             >
               <span>✂️</span>
@@ -215,7 +241,7 @@
               <span class="text-base-content/60">删除</span>
             </div>
             <div class="flex items-center gap-1">
-              <kbd class="kbd kbd-xs">N</kbd>
+              <kbd class="kbd kbd-xs">空格</kbd>
               <span class="text-base-content/60">保存</span>
             </div>
           </div>
@@ -257,11 +283,7 @@
             @click="previewFrame(frame)"
           >
             <figure class="h-32 bg-base-300">
-              <img
-                :src="`${API_BASE_URL}${frame.path}`"
-                :alt="frame.filename"
-                class="w-full h-full object-cover"
-              />
+              <img :src="frame.path" :alt="frame.filename" class="w-full h-full object-cover" />
             </figure>
             <div class="card-body p-2">
               <div class="text-xs truncate" :title="frame.filename">
@@ -308,10 +330,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { API_BASE_URL } from '@/config'
 import ClassGroupManager from './ClassGroupManager.vue'
 import VideoList from './VideoList.vue'
 import ImagePreviewModal from './ImagePreviewModal.vue'
+import axios from 'axios'
 
 interface Video {
   filename: string
@@ -369,6 +391,74 @@ const currentAnnotations = ref<Annotation[]>([])
 const editingAnnotationIndex = ref<number | null>(null)
 const isEditingAnnotation = ref(false)
 
+// 进度持久化配置
+const PROGRESS_STORAGE_KEY = 'video-capture-progress'
+
+// 进度保存和恢复函数
+const saveProgress = () => {
+  try {
+    const progress = {
+      currentVideoFilename: currentVideoFilename.value,
+      videoUrl: videoUrl.value,
+      currentTime: currentTime.value,
+      isPlaying: isPlaying.value,
+      playbackSpeed: playbackSpeed.value,
+      selectedClassId: selectedClassId.value,
+      timestamp: Date.now(),
+    }
+    localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress))
+  } catch (error) {
+    console.warn('保存进度失败:', error)
+  }
+}
+
+const loadProgress = () => {
+  try {
+    const progressStr = localStorage.getItem(PROGRESS_STORAGE_KEY)
+    if (!progressStr) return
+
+    const progress = JSON.parse(progressStr)
+    // 检查是否在最近一小时内保存的，避免加载过期的进度
+    if (Date.now() - progress.timestamp > 3600000) {
+      localStorage.removeItem(PROGRESS_STORAGE_KEY)
+      return
+    }
+
+    // 恢复进度
+    if (progress.selectedClassId !== undefined) {
+      selectedClassId.value = progress.selectedClassId
+    }
+    if (progress.playbackSpeed) {
+      playbackSpeed.value = progress.playbackSpeed
+    }
+
+    // 如果有选中的视频，恢复视频状态
+    if (progress.currentVideoFilename && progress.videoUrl) {
+      isPlaying.value = false // 默认暂停恢复
+      currentVideoFilename.value = progress.currentVideoFilename
+      videoUrl.value = progress.videoUrl
+
+      // 延迟设置视频以确保DOM更新
+      setTimeout(() => {
+        if (videoRef.value && progress.currentTime) {
+          videoRef.value.addEventListener('loadedmetadata', () => {
+            videoRef.value!.currentTime = progress.currentTime
+            if (progress.isPlaying) {
+              videoRef.value?.play().catch(() => {})
+            }
+          })
+        }
+        if (videoRef.value) {
+          videoRef.value.load()
+        }
+      }, 100)
+    }
+  } catch (error) {
+    console.warn('加载进度失败:', error)
+    localStorage.removeItem(PROGRESS_STORAGE_KEY)
+  }
+}
+
 // 类名管理状态
 const allClasses = ref<Class[]>([])
 const globalClasses = ref<Class[]>([])
@@ -390,6 +480,11 @@ const displayedClasses = computed(() => {
   return globalClasses.value
 })
 
+// 快速选择类名：限制显示前8个类名
+const quickSelectClasses = computed(() => {
+  return displayedClasses.value.slice(0, 8)
+})
+
 const currentFrames = computed(() => {
   if (!currentVideoFilename.value) return []
   return allFrames.value.filter((frame) => frame.video_filename === currentVideoFilename.value)
@@ -397,10 +492,8 @@ const currentFrames = computed(() => {
 
 const loadFrames = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/frames`)
-    if (!response.ok) throw new Error('获取截图列表失败')
-    const data = await response.json()
-    allFrames.value = data.frames
+    const response = await axios.get('/api/frames')
+    allFrames.value = response.data.frames
   } catch (error) {
     console.error('加载截图列表失败:', error)
     showMessage('加载截图列表失败', 'error')
@@ -414,7 +507,7 @@ const onVideoSelected = (video: Video) => {
   }
 
   currentVideoFilename.value = video.filename
-  videoUrl.value = `${API_BASE_URL}${video.path}`
+  videoUrl.value = video.path
 
   setTimeout(() => {
     if (videoRef.value) {
@@ -438,6 +531,23 @@ const onVideoUploaded = (data: any) => {
 
 watch(currentVideoFilename, () => {
   loadFrames()
+  saveProgress() // 保存进度
+})
+
+watch(currentTime, () => {
+  saveProgress() // 定期保存播放进度
+})
+
+watch(isPlaying, () => {
+  saveProgress() // 保存播放状态
+})
+
+watch(playbackSpeed, () => {
+  saveProgress() // 保存播放速度
+})
+
+watch(selectedClassId, () => {
+  saveProgress() // 保存选中的类名
 })
 
 const formatDate = (timestamp: number) => {
@@ -495,7 +605,45 @@ const formatTime = (seconds: number) => {
 const handleKeyPress = (e: KeyboardEvent) => {
   if (e.key === ' ') {
     e.preventDefault()
-    if (videoUrl.value) togglePlay()
+    if (isSelectionMode.value) {
+      // 在框选模式下，空格键保存标注并继续播放
+      if (currentAnnotations.value.length > 0) {
+        // 在清理UI之前先保存当前标注状态
+        const annotationsToSave = [...currentAnnotations.value]
+
+        // 立即清理UI状态，播放视频
+        currentAnnotations.value = []
+        isSelectionMode.value = false
+        selectionRect.value = null
+        drawSelection() // 立即更新画布，清除标注框
+
+        if (videoRef.value) {
+          videoRef.value.play()
+          isPlaying.value = true
+        }
+
+        // 异步保存标注，使用保存时的标注状态
+        saveAllAnnotationsWithData(annotationsToSave).catch((error: any) => {
+          console.error('保存标注失败:', error)
+          showMessage('保存标注失败', 'error')
+        })
+      } else {
+        // 如果没有标注，直接退出框选模式并播放
+        exitSelectionMode()
+        if (videoRef.value) {
+          videoRef.value.play()
+          isPlaying.value = true
+        }
+      }
+    } else if (isPlaying.value) {
+      // 如果视频在播放，暂停并进入框选模式
+      videoRef.value?.pause()
+      isPlaying.value = false
+      enterSelectionMode()
+    } else {
+      // 不在框选模式下，空格键播放/暂停
+      if (videoUrl.value) togglePlay()
+    }
   } else if ((e.key === 'r' || e.key === 'R') && videoUrl.value && !isSelectionMode.value) {
     e.preventDefault()
     enterSelectionMode()
@@ -513,13 +661,6 @@ const handleKeyPress = (e: KeyboardEvent) => {
   ) {
     e.preventDefault()
     deleteEditingAnnotation()
-  } else if (
-    (e.key === 'n' || e.key === 'N') &&
-    isSelectionMode.value &&
-    currentAnnotations.value.length > 0
-  ) {
-    e.preventDefault()
-    saveAllAnnotations()
   } else if (e.key === 'ArrowLeft') {
     e.preventDefault()
     if (videoUrl.value) skipBackward()
@@ -534,6 +675,7 @@ const handleKeyPress = (e: KeyboardEvent) => {
 onMounted(() => {
   loadFrames()
   loadClasses()
+  loadProgress() // 恢复进度
 
   if (videoRef.value) {
     videoRef.value.addEventListener('timeupdate', updateTime)
@@ -543,10 +685,12 @@ onMounted(() => {
   }
 
   window.addEventListener('keydown', handleKeyPress)
+  window.addEventListener('beforeunload', saveProgress)
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyPress)
+  window.removeEventListener('beforeunload', saveProgress)
 })
 
 const showMessage = (msg: string, type: 'info' | 'success' | 'error' = 'info') => {
@@ -576,8 +720,6 @@ const enterSelectionMode = () => {
 
   // 清空之前的标注
   currentAnnotations.value = []
-
-  showMessage('框选区域并添加标注，完成后点击保存', 'info')
 }
 
 const exitSelectionMode = () => {
@@ -914,15 +1056,21 @@ const drawSelection = () => {
       ctx.lineWidth = 2
       ctx.strokeRect(box.x, box.y, box.width, box.height)
 
+      // 在框内左上角显示类名标签
       ctx.fillStyle = annotationColor
-      ctx.font = 'bold 14px monospace'
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)'
-      ctx.shadowBlur = 4
+      ctx.font = 'bold 12px monospace'
       const label = ann.className
       const labelWidth = ctx.measureText(label).width
-      ctx.fillRect(box.x, box.y - 20, labelWidth + 8, 20)
+      const labelHeight = 16
+      // 确保标签在框内，不超出边界
+      const labelX = Math.max(box.x + 2, box.x)
+      const labelY = Math.max(box.y + 2, box.y)
+
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)'
+      ctx.shadowBlur = 2
+      ctx.fillRect(labelX, labelY, Math.min(labelWidth + 4, box.width - 4), labelHeight)
       ctx.fillStyle = '#ffffff'
-      ctx.fillText(label, box.x + 4, box.y - 5)
+      ctx.fillText(label, labelX + 2, labelY + 12)
       ctx.shadowBlur = 0
     })
     return
@@ -1048,14 +1196,80 @@ const addAnnotation = () => {
     color: selectedClass.color,
   })
 
-  showMessage(
-    `已添加标注: ${selectedClass.name}，共${currentAnnotations.value.length}个`,
-    'success',
-  )
-
   // 清除当前选区，准备下一个标注
   selectionRect.value = null
   drawSelection()
+}
+
+// 保存所有标注 - 使用传递的参数
+const saveAllAnnotationsWithData = async (annotations: Annotation[]) => {
+  if (!videoRef.value) return
+
+  if (annotations.length === 0) {
+    showMessage('请先添加至少一个标注', 'error')
+    return
+  }
+
+  const videoWidth = videoRef.value.videoWidth
+  const videoHeight = videoRef.value.videoHeight
+
+  // 创建原始分辨率的canvas
+  const canvas = document.createElement('canvas')
+  canvas.width = videoWidth
+  canvas.height = videoHeight
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  // 直接绘制原始视频帧，不进行缩放和填充
+  ctx.drawImage(videoRef.value, 0, 0, videoWidth, videoHeight)
+
+  // 构建标注数据 - 使用原始坐标
+  const annotationData = annotations.map((ann) => {
+    const box = ann.box
+    return {
+      class_id: ann.classId,
+      class_name: ann.className,
+      box: {
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        height: box.height,
+      },
+    }
+  })
+
+  canvas.toBlob(async (blob) => {
+    if (!blob) return
+
+    const formData = new FormData()
+    formData.append('image', blob, `frame_${Date.now()}.png`)
+
+    if (currentVideoFilename.value && typeof currentVideoFilename.value === 'string') {
+      formData.append('video_filename', currentVideoFilename.value)
+    }
+
+    // 添加原始分辨率的标注数据
+    formData.append(
+      'annotations',
+      JSON.stringify({
+        image_size: { width: videoWidth, height: videoHeight },
+        annotations: annotationData,
+      }),
+    )
+
+    try {
+      showMessage('正在保存截图和标注...', 'info')
+      const response = await axios.post('/api/save-frame-multi', formData)
+
+      const data = response.data
+      showMessage(`保存成功: ${annotationData.length}个标注`, 'success')
+
+      loadFrames()
+    } catch (error) {
+      console.error('保存失败:', error)
+      showMessage('保存失败', 'error')
+    }
+  }, 'image/png')
 }
 
 // 保存所有标注 - 使用原始分辨率
@@ -1116,14 +1330,9 @@ const saveAllAnnotations = async () => {
 
     try {
       showMessage('正在保存截图和标注...', 'info')
-      const response = await fetch(`${API_BASE_URL}/api/save-frame-multi`, {
-        method: 'POST',
-        body: formData,
-      })
+      const response = await axios.post('/api/save-frame-multi', formData)
 
-      if (!response.ok) throw new Error('保存失败')
-
-      const data = await response.json()
+      const data = response.data
       showMessage(`保存成功: ${annotations.length}个标注`, 'success')
 
       // 清空标注列表
@@ -1142,6 +1351,10 @@ const saveAllAnnotations = async () => {
 
 // ==================== ClassGroupManager 事件处理 ====================
 
+const selectClass = (classId: number) => {
+  selectedClassId.value = classId
+}
+
 const onSelectClass = (classId: number) => {
   selectedClassId.value = classId
 }
@@ -1158,10 +1371,12 @@ const finishEditAnnotation = () => {
     isEditingAnnotation.value &&
     editingAnnotationIndex.value !== null &&
     selectionRect.value &&
-    selectedClassId.value
+    selectedClassId.value &&
+    editingAnnotationIndex.value >= 0 &&
+    editingAnnotationIndex.value < currentAnnotations.value.length
   ) {
     const selectedClass = displayedClasses.value.find((c) => c.id === selectedClassId.value)
-    if (selectedClass) {
+    if (selectedClass && editingAnnotationIndex.value !== null) {
       const annotation = currentAnnotations.value[editingAnnotationIndex.value]
       if (annotation) {
         // 更新标注
@@ -1181,7 +1396,12 @@ const finishEditAnnotation = () => {
 }
 
 const deleteEditingAnnotation = () => {
-  if (isEditingAnnotation.value && editingAnnotationIndex.value !== null) {
+  if (
+    isEditingAnnotation.value &&
+    editingAnnotationIndex.value !== null &&
+    editingAnnotationIndex.value >= 0 &&
+    editingAnnotationIndex.value < currentAnnotations.value.length
+  ) {
     currentAnnotations.value.splice(editingAnnotationIndex.value, 1)
     showMessage('标注已删除', 'success')
 
@@ -1207,12 +1427,9 @@ const onClassAdded = async () => {
 
 const loadClasses = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/classes`)
-    if (!response.ok) throw new Error('获取类名列表失败')
-    const data = await response.json()
-
-    allClasses.value = data.classes || []
-    globalClasses.value = data.classes || []
+    const response = await axios.get('/api/classes')
+    allClasses.value = response.data.classes || []
+    globalClasses.value = response.data.classes || []
   } catch (error) {
     console.error('加载类名列表失败:', error)
     showMessage('加载类名列表失败', 'error')
@@ -1237,16 +1454,11 @@ const previewFrame = async (frame: Frame) => {
       path: frame.path || '',
     }
 
-    previewImageUrl.value = `${API_BASE_URL}${frame.path || ''}`
+    previewImageUrl.value = frame.path || ''
 
     // 获取图片的标注数据
-    const response = await fetch(`${API_BASE_URL}/api/frames/${frame.filename}/annotations`)
-    if (response.ok) {
-      const data = await response.json()
-      previewAnnotations.value = data.annotations || []
-    } else {
-      previewAnnotations.value = []
-    }
+    const response = await axios.get(`/api/frames/${frame.filename}/annotations`)
+    previewAnnotations.value = response.data.annotations || []
 
     showPreview.value = true
   } catch (error) {
@@ -1263,18 +1475,13 @@ const closePreview = () => {
 
 const handleSaveAnnotations = async (annotations: any[]) => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/frames/${previewFrameInfo.value.filename}/annotations`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ annotations }),
-      },
-    )
+    const filename = previewFrameInfo.value.filename
+    if (!filename) {
+      showMessage('预览文件名丢失', 'error')
+      return
+    }
 
-    if (!response.ok) throw new Error('保存标注失败')
+    const response = await axios.post(`/api/frames/${filename}/annotations`, { annotations })
 
     showMessage('标注已保存', 'success')
     previewAnnotations.value = annotations

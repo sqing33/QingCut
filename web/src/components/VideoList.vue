@@ -48,7 +48,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { API_BASE_URL } from '@/config'
+import axios from 'axios'
 
 interface Video {
   filename: string
@@ -88,10 +88,8 @@ const formatDate = (timestamp: number) => {
 
 const loadVideos = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/videos`)
-    if (!response.ok) throw new Error('获取视频列表失败')
-    const data = await response.json()
-    videos.value = data.videos
+    const response = await axios.get('/api/videos')
+    videos.value = response.data.videos
   } catch (error) {
     console.error('加载视频列表失败:', error)
     emit('show-message', '加载视频列表失败', 'error')
@@ -118,14 +116,9 @@ const handleUpload = async (e: Event) => {
 
   try {
     emit('show-message', '正在上传视频...', 'info')
-    const response = await fetch(`${API_BASE_URL}/api/upload-video`, {
-      method: 'POST',
-      body: formData,
-    })
+    const response = await axios.post('/api/upload-video', formData)
 
-    if (!response.ok) throw new Error('上传失败')
-
-    const data = await response.json()
+    const data = response.data
 
     if (data.renamed) {
       emit('show-message', `${data.original_filename} 重复，已更名为 ${data.filename}`, 'info')

@@ -45,3 +45,4 @@ train/labels
 *.png
 
 dataset/*
+train/runs/*

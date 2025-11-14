@@ -16,3 +16,4 @@ opencv-python
 ultralytics
 websockets
 python-dotenv
+httpx

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, JSON, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -51,6 +51,7 @@ class Dataset(Base):
     
     # 关系：一个数据集包含多个图片
     frame_datasets = relationship("FrameDataset", back_populates="dataset", cascade="all, delete-orphan")
+    training_records = relationship("TrainingRecord", back_populates="dataset", cascade="all, delete-orphan")
 
 
 class Frame(Base):
@@ -108,7 +109,8 @@ class Class(Base):
     __tablename__ = "classes"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)  # 类名（如 "person", "car"） - 移除unique约束，因为不同组可以有同名类
+    name = Column(String, nullable=False)  # 中文类名（如 "人", "汽车"） - 移除unique约束，因为不同组可以有同名类
+    name_en = Column(String, nullable=False)  # 英文类名（如 "person", "car"） - 用于YOLO训练
     color = Column(String, default="#00ff00")  # 显示颜色
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -145,6 +147,60 @@ class VideoClass(Base):
     class_obj = relationship("Class")
 
 
+class TrainingRecord(Base):
+    """训练记录表 - 存储每次训练的总体信息"""
+    __tablename__ = "training_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    task_id = Column(String, unique=True, nullable=False, index=True)
+    dataset_identifier = Column(String, ForeignKey("datasets.identifier"), nullable=False)
+    model_name = Column(String, nullable=False)
+    epochs = Column(Integer, nullable=False)
+    batch_size = Column(Integer, nullable=False)
+    image_size = Column(Integer, nullable=False)
+    status = Column(String, nullable=False)  # pending, running, completed, failed, cancelled
+    progress = Column(Integer, default=0)  # Overall progress 0-100
+    current_epoch = Column(Integer, default=0)
+    total_epochs = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    duration_seconds = Column(Integer, nullable=True)  # 训练耗时（秒）
+    error_message = Column(String, nullable=True)
+    results_dir = Column(String, nullable=True)  # 训练结果（权重等）存储路径
+
+    # 关系
+    dataset = relationship("Dataset", back_populates="training_records")
+    epoch_metrics = relationship("TrainingEpochMetric", back_populates="training_record", cascade="all, delete-orphan")
+
+
+class TrainingEpochMetric(Base):
+    """训练轮次指标表 - 存储每一轮训练的详细指标"""
+    __tablename__ = "training_epoch_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    record_id = Column(Integer, ForeignKey("training_records.id", ondelete="CASCADE"), nullable=False)
+    epoch_number = Column(Integer, nullable=False)
+    
+    # YOLO 主要指标
+    train_loss = Column(Float, nullable=True)
+    val_loss = Column(Float, nullable=True)
+    precision = Column(Float, nullable=True)
+    recall = Column(Float, nullable=True)
+    map50 = Column(Float, nullable=True)  # mAP@0.5
+    map75 = Column(Float, nullable=True) # mAP@0.75
+    box_loss = Column(Float, nullable=True)
+    cls_loss = Column(Float, nullable=True)
+    
+    # 存放其他所有指标的JSON格式，保持灵活性
+    metrics_json = Column(JSON, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # 关系
+    training_record = relationship("TrainingRecord", back_populates="epoch_metrics")
+
+
 # 获取数据库会话
 async def get_db():
     async with AsyncSessionLocal() as session:
@@ -165,5 +221,6 @@ async def init_db():
 __all__ = [
     "Base", "engine", "AsyncSessionLocal", "init_db", "get_db",
     "Video", "Frame", "Class", "ClassGroup", "ClassGroupItem",
-    "VideoClass", "Dataset", "FrameDataset"
+    "VideoClass", "Dataset", "FrameDataset",
+    "TrainingRecord", "TrainingEpochMetric"
 ]

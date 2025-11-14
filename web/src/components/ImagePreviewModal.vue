@@ -166,11 +166,15 @@
                         class="w-4 h-4 rounded flex-shrink-0"
                         :style="{ backgroundColor: getClassColor(annotation.class_id) }"
                       ></div>
-                      <span class="font-semibold text-sm truncate">{{ annotation.class_name }}</span>
+                      <span class="font-semibold text-sm truncate">{{
+                        annotation.class_name
+                      }}</span>
                     </div>
                     <div class="flex items-center gap-1 flex-shrink-0">
                       <span class="text-xs text-base-content/60 whitespace-nowrap">
-                        {{ Math.round(annotation.box.width) }}×{{ Math.round(annotation.box.height) }}
+                        {{ Math.round(annotation.box.width) }}×{{
+                          Math.round(annotation.box.height)
+                        }}
                       </span>
                       <button
                         v-if="isEditMode"

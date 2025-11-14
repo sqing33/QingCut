@@ -6,7 +6,7 @@ from typing import Optional, List, Dict, Any
 import json
 
 from database import Frame, Video, Dataset, FrameDataset
-from config import FRAME_DIR
+from config import FRAME_DIR, DATASET_DIR
 from utils.file_utils import save_uploaded_file, delete_file, rename_file
 
 
@@ -177,7 +177,12 @@ async def get_all_frames(db: AsyncSession) -> List[Dict[str, Any]]:
             "created_at": frame.created_at.timestamp(),
             "video_filename": videos.get(frame.video_id) if frame.video_id else None,
             "dataset_identifier": frame.dataset_identifier,
-            "datasets": frame_datasets_map.get(frame.id, [])
+            "datasets": frame_datasets_map.get(frame.id, []),
+            "annotation_count": len(frame.annotations) if frame.annotations else 0,
+            "class_names": [
+                ann.get("class_name") for ann in frame.annotations
+                if isinstance(ann, dict) and ann.get("class_name")
+            ] if frame.annotations else []
         }
         for frame in frames
     ]
@@ -328,12 +333,12 @@ async def rename_frame(db: AsyncSession, old_name: str, new_name: str) -> None:
 
 
 async def delete_frame(db: AsyncSession, filename: str) -> None:
-    """删除截图
-    
+    """删除截图及其在所有数据集中的副本
+
     Args:
         db: 数据库会话
         filename: 文件名
-    
+
     Raises:
         ValueError: 如果文件不存在
     """
@@ -342,14 +347,60 @@ async def delete_frame(db: AsyncSession, filename: str) -> None:
         select(Frame).where(Frame.filename == filename)
     )
     frame = result.scalar_one_or_none()
-    
+
     if not frame:
         raise ValueError("文件不存在")
-    
-    # 删除文件
+
+    # 查找该图片在哪些数据集中的关联
+    frame_dataset_result = await db.execute(
+        select(FrameDataset).where(FrameDataset.frame_id == frame.id)
+    )
+    frame_datasets = frame_dataset_result.scalars().all()
+
+    # 获取数据集信息
+    dataset_ids = [fd.dataset_id for fd in frame_datasets]
+    datasets = []
+    if dataset_ids:
+        dataset_result = await db.execute(
+            select(Dataset).where(Dataset.id.in_(dataset_ids))
+        )
+        datasets = dataset_result.scalars().all()
+
+    # 先获取字符串形式的 filename
+    filename_str = str(frame.filename)
+
+    # 删除数据集目录中的图片文件
+    for dataset in datasets:
+        # 强制转换为字符串
+        dataset_identifier = str(dataset.identifier)
+
+        # 删除训练集中的图片文件
+        train_image_path = DATASET_DIR / dataset_identifier / "train" / "images" / filename_str
+        delete_file(train_image_path)
+
+        # 删除验证集中的图片文件
+        val_image_path = DATASET_DIR / dataset_identifier / "val" / "images" / filename_str
+        delete_file(val_image_path)
+
+        # 删除对应的标注文件
+        label_filename = filename_str.rsplit('.', 1)[0] + '.txt'
+
+        # 删除训练集标注文件
+        train_label_path = DATASET_DIR / dataset_identifier / "train" / "labels" / label_filename
+        delete_file(train_label_path)
+
+        # 删除验证集标注文件
+        val_label_path = DATASET_DIR / dataset_identifier / "val" / "labels" / label_filename
+        delete_file(val_label_path)
+
+    # 删除 frame-dataset 关联记录
+    for frame_dataset in frame_datasets:
+        await db.delete(frame_dataset)
+
+    # 删除原始文件
     filepath = FRAME_DIR / filename
     delete_file(filepath)
-    
-    # 从数据库删除
+
+    # 从数据库删除 frame 记录
     await db.delete(frame)
     await db.commit()

@@ -8,7 +8,7 @@ from config import (
     CORS_ORIGINS, CORS_CREDENTIALS, CORS_METHODS, CORS_HEADERS
 )
 from database import init_db
-from routers import videos, frames, classes, datasets, export
+from routers import videos, frames, classes, datasets, export, train
 
 app = FastAPI()
 
@@ -27,6 +27,7 @@ FRAME_DIR.mkdir(parents=True, exist_ok=True)
 
 # 挂载静态文件目录
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/train", StaticFiles(directory="train"), name="train")
 
 # 注册路由
 app.include_router(videos.router)
@@ -34,6 +35,7 @@ app.include_router(frames.router)
 app.include_router(classes.router)
 app.include_router(datasets.router)
 app.include_router(export.router)
+app.include_router(train.router)
 
 
 @app.on_event("startup")

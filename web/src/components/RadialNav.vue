@@ -48,8 +48,8 @@ const isMenuOpen = ref(false)
 
 const navItems: NavItem[] = [
   { label: '视频截取', path: '/capture', icon: '🎬' },
-  { label: '训练', path: '/train', icon: '🚀' },
   { label: '数据', path: '/data', icon: '📊' },
+  { label: '训练', path: '/train', icon: '🚀' },
   { label: '设置', path: '/settings', icon: '⚙️' },
 ]
 

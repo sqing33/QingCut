@@ -25,14 +25,18 @@ async def list_classes(db: AsyncSession = Depends(get_db)):
 async def create_class(data: dict, db: AsyncSession = Depends(get_db)):
     """创建新类名"""
     name = data.get("name")
+    name_en = data.get("name_en")
     color = data.get("color", "#00ff00")
     group_id = data.get("group_id")
     
     if not name:
-        raise HTTPException(status_code=400, detail="类名不能为空")
+        raise HTTPException(status_code=400, detail="中文类名不能为空")
+    
+    if not name_en:
+        raise HTTPException(status_code=400, detail="英文类名不能为空")
     
     try:
-        cls = await class_service.create_class(db, name, color, group_id)
+        cls = await class_service.create_class(db, name, name_en, color, group_id)
         return {"success": True, "class": cls}
     except Exception as e:
         await db.rollback()

@@ -294,9 +294,17 @@ async def export_yolo_dataset_to_folder(
             orig_width, orig_height = orig_img.size
             orig_img.close()
             
+            # 将数据库 class_id 映射为连续索引 (0, 1, 2, ...)
+            mapped_annotations_list = []
+            for ann in annotations_list:
+                if ann['class_id'] in class_map:
+                    mapped_ann = ann.copy()
+                    mapped_ann['class_id'] = class_map[ann['class_id']]
+                    mapped_annotations_list.append(mapped_ann)
+            
             # 映射标注到处理后的图片
             mapped_annotations = map_annotations_to_processed_image(
-                annotations_list,
+                mapped_annotations_list,
                 orig_width,
                 orig_height,
                 DEFAULT_IMAGE_SIZE
@@ -331,9 +339,17 @@ async def export_yolo_dataset_to_folder(
             orig_width, orig_height = orig_img.size
             orig_img.close()
             
+            # 将数据库 class_id 映射为连续索引 (0, 1, 2, ...)
+            mapped_annotations_list = []
+            for ann in annotations_list:
+                if ann['class_id'] in class_map:
+                    mapped_ann = ann.copy()
+                    mapped_ann['class_id'] = class_map[ann['class_id']]
+                    mapped_annotations_list.append(mapped_ann)
+            
             # 映射标注到处理后的图片
             mapped_annotations = map_annotations_to_processed_image(
-                annotations_list,
+                mapped_annotations_list,
                 orig_width,
                 orig_height,
                 DEFAULT_IMAGE_SIZE
@@ -471,3 +487,55 @@ async def export_yolo_dataset_to_folder(
         "total_annotations": total_annotations,
         "classes": class_names
     }
+
+
+async def export_yolo_dataset_as_zip(
+    db: AsyncSession,
+    dataset_identifier: str
+) -> tuple[bytes, str]:
+    """将现有YOLO数据集导出为ZIP文件（用于下载）
+
+    Args:
+        db: 数据库会话
+        dataset_identifier: 数据集标识符
+
+    Returns:
+        ZIP文件内容和文件名
+
+    Raises:
+        ValueError: 如果数据集不存在或没有数据
+    """
+    import zipfile
+    from io import BytesIO
+
+    # 查找数据集
+    result = await db.execute(
+        select(Dataset).where(Dataset.identifier == dataset_identifier)
+    )
+    dataset = result.scalar_one_or_none()
+
+    if not dataset:
+        raise ValueError("数据集不存在")
+
+    # 检查数据集目录是否存在
+    dataset_dir = DATASET_DIR / dataset_identifier
+    if not dataset_dir.exists():
+        raise ValueError("数据集文件不存在")
+
+    # 获取数据集名称作为ZIP文件名
+    zip_filename = f"{dataset.name}_{dataset_identifier}.zip"
+
+    # 创建ZIP文件
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # 添加数据集目录中的所有文件
+        for file_path in dataset_dir.glob('**/*'):
+            if file_path.is_file():
+                # 计算相对路径（去掉dataset根目录部分）
+                relative_path = file_path.relative_to(dataset_dir)
+                zip_file.write(file_path, f"{dataset_identifier}/{relative_path}")
+
+    zip_buffer.seek(0)
+    zip_content = zip_buffer.read()
+
+    return zip_content, zip_filename

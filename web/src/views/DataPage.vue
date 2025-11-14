@@ -1,10 +1,13 @@
 <template>
   <div class="page-container-fixed">
     <!-- 顶部筛选栏 -->
-    <div class="glass-panel rounded-2xl shadow-xl p-6 mb-6 flex-shrink-0" style="position: relative; z-index: 10;">
+    <div
+      class="glass-panel rounded-2xl shadow-xl p-6 mb-6 flex-shrink-0"
+      style="position: relative; z-index: 10"
+    >
       <div class="flex items-center justify-between gap-4">
         <h2 class="text-2xl font-bold flex-shrink-0">📊 数据管理</h2>
-        
+
         <!-- 筛选条件 -->
         <div class="flex items-center gap-4 flex-1">
           <!-- 视频筛选（多选） -->
@@ -13,36 +16,43 @@
             <div class="dropdown dropdown-bottom">
               <label tabindex="0" class="btn btn-sm w-36 justify-between">
                 <span class="truncate">
-                  {{ selectedVideos.length === 0 ? '全部视频' : 
-                     selectedVideos.length === 1 ? selectedVideos[0] : 
-                     `已选 ${selectedVideos.length} 个视频` }}
+                  {{
+                    selectedVideos.length === 0
+                      ? '全部视频'
+                      : selectedVideos.length === 1
+                        ? selectedVideos[0]
+                        : `已选 ${selectedVideos.length} 个视频`
+                  }}
                 </span>
                 <span>▼</span>
               </label>
-            <div tabindex="0" class="dropdown-content z-[100] menu p-2 shadow bg-base-100 rounded-box w-36 mt-2 max-h-60 overflow-y-auto">
-              <li>
-                <label class="label cursor-pointer justify-start gap-2">
-                  <input 
-                    type="checkbox" 
-                    class="checkbox checkbox-sm" 
-                    :checked="selectedVideos.length === 0"
-                    @change="clearVideoSelection"
-                  />
-                  <span>全部视频</span>
-                </label>
-              </li>
-              <li v-for="video in videos" :key="video">
-                <label class="label cursor-pointer justify-start gap-2">
-                  <input 
-                    type="checkbox" 
-                    class="checkbox checkbox-sm" 
-                    :checked="selectedVideos.includes(video)"
-                    @change="toggleVideoSelection(video)"
-                  />
-                  <span class="truncate">{{ video }}</span>
-                </label>
-              </li>
-            </div>
+              <div
+                tabindex="0"
+                class="dropdown-content z-[100] menu p-2 shadow bg-base-100 rounded-box w-36 mt-2 max-h-60 overflow-y-auto"
+              >
+                <li>
+                  <label class="label cursor-pointer justify-start gap-2">
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-sm"
+                      :checked="selectedVideos.length === 0"
+                      @change="clearVideoSelection"
+                    />
+                    <span>全部视频</span>
+                  </label>
+                </li>
+                <li v-for="video in videos" :key="video">
+                  <label class="label cursor-pointer justify-start gap-2">
+                    <input
+                      type="checkbox"
+                      class="checkbox checkbox-sm"
+                      :checked="selectedVideos.includes(video)"
+                      @change="toggleVideoSelection(video)"
+                    />
+                    <span class="truncate">{{ video }}</span>
+                  </label>
+                </li>
+              </div>
             </div>
           </div>
 
@@ -71,10 +81,17 @@
           <!-- 数据集筛选 -->
           <div class="flex items-center gap-2">
             <span class="text-sm font-semibold whitespace-nowrap">📁 数据集</span>
-            <select v-model="filters.datasetIdentifier" class="select select-bordered select-sm w-32">
+            <select
+              v-model="filters.datasetIdentifier"
+              class="select select-bordered select-sm w-32"
+            >
               <option value="">全部数据集</option>
               <option value="unassigned">未分配</option>
-              <option v-for="dataset in existingDatasets" :key="dataset.identifier" :value="dataset.identifier">
+              <option
+                v-for="dataset in existingDatasets"
+                :key="dataset.identifier"
+                :value="dataset.identifier"
+              >
                 {{ dataset.name }}
               </option>
             </select>
@@ -94,11 +111,9 @@
 
         <!-- 操作按钮 -->
         <div class="flex gap-2 flex-shrink-0">
-          <button @click="loadData" class="btn btn-sm btn-ghost" title="刷新">
-            🔄 刷新
-          </button>
-          <button @click="exportData" class="btn btn-sm btn-primary">
-            📥 导出数据
+          <button @click="loadData" class="btn btn-sm btn-ghost" title="刷新">🔄 刷新</button>
+          <button @click="downloadExportModal = true" class="btn btn-sm btn-primary">
+            📥 导出数据集
           </button>
           <button @click="showYoloExportModal = true" class="btn btn-sm btn-success">
             🎯 转换YOLO数据集
@@ -111,24 +126,30 @@
     </div>
 
     <!-- 批量操作栏 -->
-    <div v-if="selectedItems.length > 0" class="glass-panel rounded-2xl shadow-xl p-4 mb-4 flex-shrink-0" style="position: relative; z-index: 9;">
+    <div
+      v-if="selectedItems.length > 0"
+      class="glass-panel rounded-2xl shadow-xl p-4 mb-4 flex-shrink-0"
+      style="position: relative; z-index: 9"
+    >
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
           <span class="font-semibold">已选择 {{ selectedItems.length }} 张图片</span>
-          <button @click="selectedItems = []" class="btn btn-xs btn-ghost">
-            取消选择
-          </button>
+          <button @click="selectedItems = []" class="btn btn-xs btn-ghost">取消选择</button>
         </div>
         <div class="flex items-center gap-2">
           <span class="text-sm font-semibold">分配到数据集：</span>
           <select v-model="batchAssignDataset" class="select select-bordered select-sm w-48">
             <option value="">-- 选择数据集 --</option>
-            <option v-for="dataset in existingDatasets" :key="dataset.identifier" :value="dataset.identifier">
+            <option
+              v-for="dataset in existingDatasets"
+              :key="dataset.identifier"
+              :value="dataset.identifier"
+            >
               {{ dataset.name }}
             </option>
           </select>
-          <button 
-            @click="handleBatchAssign" 
+          <button
+            @click="handleBatchAssign"
             class="btn btn-sm btn-primary"
             :disabled="!batchAssignDataset || batchAssigning"
           >
@@ -140,7 +161,10 @@
     </div>
 
     <!-- 数据表格 -->
-    <div class="glass-panel rounded-2xl shadow-xl overflow-hidden flex-1 flex flex-col" style="position: relative; z-index: 1;">
+    <div
+      class="glass-panel rounded-2xl shadow-xl overflow-hidden flex-1 flex flex-col"
+      style="position: relative; z-index: 1"
+    >
       <!-- 表格容器 -->
       <div class="overflow-x-auto flex-1">
         <table class="table table-zebra table-pin-rows">
@@ -180,12 +204,7 @@
                 <p>暂无数据</p>
               </td>
             </tr>
-            <tr
-              v-else
-              v-for="item in paginatedData"
-              :key="item.filename"
-              class="hover"
-            >
+            <tr v-else v-for="item in paginatedData" :key="item.filename" class="hover">
               <td>
                 <label>
                   <input
@@ -198,12 +217,11 @@
               </td>
               <td>
                 <div class="avatar">
-                  <div class="mask mask-squircle w-16 h-16 cursor-pointer" @click="previewImage(item)">
-                    <img
-                      :src="`${API_BASE_URL}${item.path}`"
-                      :alt="item.filename"
-                      class="object-cover"
-                    />
+                  <div
+                    class="mask mask-squircle w-16 h-16 cursor-pointer"
+                    @click="previewImage(item)"
+                  >
+                    <img :src="`${item.path}`" :alt="item.filename" class="object-cover" />
                   </div>
                 </div>
               </td>
@@ -213,7 +231,10 @@
                 </div>
               </td>
               <td>
-                <div class="badge badge-ghost truncate max-w-xs" :title="item.video_filename || '未知'">
+                <div
+                  class="badge badge-ghost truncate max-w-xs"
+                  :title="item.video_filename || '未知'"
+                >
                   {{ item.video_filename || '未知' }}
                 </div>
               </td>
@@ -230,9 +251,7 @@
                 <span v-else class="text-base-content/40 text-xs">未分配</span>
               </td>
               <td>
-                <div class="badge badge-primary">
-                  {{ item.annotation_count || 0 }} 个
-                </div>
+                <div class="badge badge-primary">{{ item.annotation_count || 0 }} 个</div>
               </td>
               <td>
                 <div class="flex flex-wrap gap-1">
@@ -244,7 +263,10 @@
                   >
                     {{ className }}
                   </span>
-                  <span v-if="!item.class_names || item.class_names.length === 0" class="text-base-content/40">
+                  <span
+                    v-if="!item.class_names || item.class_names.length === 0"
+                    class="text-base-content/40"
+                  >
                     无标注
                   </span>
                 </div>
@@ -256,18 +278,10 @@
               </td>
               <td>
                 <div class="flex gap-1">
-                  <button
-                    @click="previewImage(item)"
-                    class="btn btn-xs btn-ghost"
-                    title="预览"
-                  >
+                  <button @click="previewImage(item)" class="btn btn-xs btn-ghost" title="预览">
                     👁️
                   </button>
-                  <button
-                    @click="downloadImage(item)"
-                    class="btn btn-xs btn-ghost"
-                    title="下载"
-                  >
+                  <button @click="downloadImage(item)" class="btn btn-xs btn-ghost" title="下载">
                     📥
                   </button>
                   <button
@@ -297,16 +311,10 @@
           显示 {{ startIndex + 1 }} - {{ endIndex }} 条，共 {{ filteredData.length }} 条
         </div>
         <div class="join">
-          <button
-            class="join-item btn btn-sm"
-            :disabled="currentPage === 1"
-            @click="currentPage--"
-          >
+          <button class="join-item btn btn-sm" :disabled="currentPage === 1" @click="currentPage--">
             «
           </button>
-          <button class="join-item btn btn-sm">
-            第 {{ currentPage }} / {{ totalPages }} 页
-          </button>
+          <button class="join-item btn btn-sm">第 {{ currentPage }} / {{ totalPages }} 页</button>
           <button
             class="join-item btn btn-sm"
             :disabled="currentPage === totalPages"
@@ -360,7 +368,9 @@
               <span>转换YOLO训练数据集</span>
             </h3>
             <div class="text-sm opacity-80">
-              将从选中的 <span class="font-bold text-primary">{{ selectedVideos.length || '全部' }}</span> 个视频中提取带标注的图片
+              将从选中的
+              <span class="font-bold text-primary">{{ selectedVideos.length || '全部' }}</span>
+              个视频中提取带标注的图片
             </div>
           </div>
         </div>
@@ -369,7 +379,11 @@
         <div class="modal-content">
           <!-- 模式选择卡片 -->
           <div class="mode-selector">
-            <label class="mode-option" :class="{ 'mode-option-active': yoloExportForm.mode === 'new' }" @click="yoloExportForm.mode = 'new'">
+            <label
+              class="mode-option"
+              :class="{ 'mode-option-active': yoloExportForm.mode === 'new' }"
+              @click="yoloExportForm.mode = 'new'"
+            >
               <div class="mode-content">
                 <div class="mode-icon">🆕</div>
                 <div>
@@ -378,8 +392,12 @@
                 </div>
               </div>
             </label>
-            
-            <label class="mode-option" :class="{ 'mode-option-active': yoloExportForm.mode === 'append' }" @click="yoloExportForm.mode = 'append'">
+
+            <label
+              class="mode-option"
+              :class="{ 'mode-option-active': yoloExportForm.mode === 'append' }"
+              @click="yoloExportForm.mode = 'append'"
+            >
               <div class="mode-content">
                 <div class="mode-icon">➕</div>
                 <div>
@@ -423,7 +441,9 @@
                 />
                 <div class="form-hint">
                   <span class="opacity-60">保存路径：</span>
-                  <code class="text-primary">server/dataset/{{ yoloExportForm.identifier || '{标识符}' }}/</code>
+                  <code class="text-primary"
+                    >server/dataset/{{ yoloExportForm.identifier || '{标识符}' }}/</code
+                  >
                 </div>
               </div>
             </div>
@@ -435,19 +455,34 @@
                   <span class="label-icon">📁</span>
                   <span>选择现有数据集</span>
                 </label>
-                <select v-model="yoloExportForm.existingDataset" class="select select-bordered w-full">
+                <select
+                  v-model="yoloExportForm.existingDataset"
+                  class="select select-bordered w-full"
+                >
                   <option value="">-- 请选择要追加的数据集 --</option>
-                  <option 
-                    v-for="dataset in existingDatasets" 
-                    :key="dataset.identifier" 
+                  <option
+                    v-for="dataset in existingDatasets"
+                    :key="dataset.identifier"
                     :value="dataset.identifier"
                   >
-                    {{ dataset.name }} ({{ dataset.image_count }} 张图片)
+                    <template
+                      v-if="dataset.train_images !== undefined && dataset.val_images !== undefined"
+                    >
+                      {{ dataset.name }} ({{ dataset.total_images }} 张: 训练{{
+                        dataset.train_images
+                      }}
+                      验证{{ dataset.val_images }})
+                    </template>
+                    <template v-else>
+                      {{ dataset.name }} ({{ dataset.image_count }} 张图片)
+                    </template>
                   </option>
                 </select>
                 <div class="form-hint" v-if="yoloExportForm.existingDataset">
                   <span class="opacity-60">追加到：</span>
-                  <code class="text-primary">server/dataset/{{ yoloExportForm.existingDataset }}/</code>
+                  <code class="text-primary"
+                    >server/dataset/{{ yoloExportForm.existingDataset }}/</code
+                  >
                 </div>
               </div>
             </div>
@@ -474,22 +509,35 @@
 
         <!-- 底部按钮栏 -->
         <div class="modal-footer">
-          <button 
-            @click="showYoloExportModal = false; yoloExportForm.name = ''; yoloExportForm.identifier = ''; yoloExportForm.mode = 'new'; yoloExportForm.existingDataset = ''" 
+          <button
+            @click="
+              () => {
+                showYoloExportModal = false
+                yoloExportForm.name = ''
+                yoloExportForm.identifier = ''
+                yoloExportForm.mode = 'new'
+                yoloExportForm.existingDataset = ''
+              }
+            "
             class="btn btn-ghost"
             :disabled="yoloExporting"
           >
             取消
           </button>
-          <button 
-            @click="handleYoloExport" 
+          <button
+            @click="handleYoloExport"
             class="btn btn-success min-w-[140px]"
-            :disabled="(yoloExportForm.mode === 'new' && (!yoloExportForm.name || !yoloExportForm.identifier)) || 
-                       (yoloExportForm.mode === 'append' && !yoloExportForm.existingDataset) || 
-                       yoloExporting"
+            :disabled="
+              (yoloExportForm.mode === 'new' &&
+                (!yoloExportForm.name || !yoloExportForm.identifier)) ||
+              (yoloExportForm.mode === 'append' && !yoloExportForm.existingDataset) ||
+              yoloExporting
+            "
           >
             <span v-if="yoloExporting" class="loading loading-spinner loading-sm"></span>
-            <span v-else>{{ yoloExportForm.mode === 'new' ? '🚀 创建数据集' : '➕ 追加图片' }}</span>
+            <span v-else>{{
+              yoloExportForm.mode === 'new' ? '🚀 创建数据集' : '➕ 追加图片'
+            }}</span>
           </button>
         </div>
       </div>
@@ -502,15 +550,15 @@
         <div class="mb-4">
           <div class="text-sm opacity-70 mb-2">图片：{{ editItem.filename }}</div>
         </div>
-        
+
         <!-- 数据集多选列表 -->
         <div class="form-control">
           <label class="label">
             <span class="label-text font-semibold">选择数据集</span>
           </label>
           <div class="max-h-60 overflow-y-auto border border-base-300 rounded-lg p-3 space-y-2">
-            <label 
-              v-for="dataset in existingDatasets" 
+            <label
+              v-for="dataset in existingDatasets"
               :key="dataset.identifier"
               class="flex items-center gap-3 p-2 hover:bg-base-200 rounded-lg cursor-pointer transition-colors"
             >
@@ -522,7 +570,9 @@
               />
               <div class="flex-1">
                 <div class="font-medium">{{ dataset.name }}</div>
-                <div class="text-xs opacity-60">{{ dataset.identifier }} ({{ dataset.image_count }} 张)</div>
+                <div class="text-xs opacity-60">
+                  {{ dataset.identifier }} ({{ dataset.image_count }} 张)
+                </div>
               </div>
             </label>
             <div v-if="existingDatasets.length === 0" class="text-center py-4 text-base-content/40">
@@ -532,15 +582,19 @@
         </div>
 
         <div class="modal-action">
-          <button 
-            @click="handleSaveDatasets" 
-            class="btn btn-primary"
-            :disabled="editSaving"
-          >
+          <button @click="handleSaveDatasets" class="btn btn-primary" :disabled="editSaving">
             <span v-if="editSaving" class="loading loading-spinner loading-xs"></span>
             <span v-else>保存</span>
           </button>
-          <button @click="editItem = null; editSelectedDatasets = []" class="btn">
+          <button
+            @click="
+              () => {
+                editItem = null
+                editSelectedDatasets = []
+              }
+            "
+            class="btn"
+          >
             取消
           </button>
         </div>
@@ -551,15 +605,15 @@
     <div v-if="showEditDatasetModal" class="modal modal-open">
       <div class="modal-box max-w-2xl">
         <h3 class="font-bold text-lg mb-4">⚙️ 管理数据集</h3>
-        
+
         <div v-if="existingDatasets.length === 0" class="text-center py-8 text-base-content/40">
           <div class="text-4xl mb-2">📭</div>
           <p>暂无数据集</p>
         </div>
-        
+
         <div v-else class="space-y-3 max-h-96 overflow-y-auto">
-          <div 
-            v-for="dataset in existingDatasets" 
+          <div
+            v-for="dataset in existingDatasets"
             :key="dataset.identifier"
             class="glass-panel p-4 rounded-lg"
           >
@@ -574,7 +628,7 @@
                     @keyup.enter="handleSaveDatasetName"
                   />
                   <div class="flex gap-2">
-                    <button 
+                    <button
                       @click="handleSaveDatasetName"
                       class="btn btn-sm btn-primary"
                       :disabled="savingDataset || !editingDatasetName"
@@ -582,8 +636,13 @@
                       <span v-if="savingDataset" class="loading loading-spinner loading-xs"></span>
                       <span v-else>💾 保存</span>
                     </button>
-                    <button 
-                      @click="editingDatasetIdentifier = ''; editingDatasetName = ''"
+                    <button
+                      @click="
+                        () => {
+                          editingDatasetIdentifier = ''
+                          editingDatasetName = ''
+                        }
+                      "
                       class="btn btn-sm btn-ghost"
                       :disabled="savingDataset"
                     >
@@ -593,20 +652,29 @@
                 </div>
                 <div v-else>
                   <div class="font-semibold text-lg">{{ dataset.name }}</div>
-                  <div class="text-sm opacity-60">
-                    标识符: {{ dataset.identifier }} | {{ dataset.image_count }} 张图片
+                  <div
+                    v-if="dataset.train_images !== undefined && dataset.val_images !== undefined"
+                    class="text-sm opacity-60"
+                  >
+                    {{ dataset.identifier }} ({{ dataset.total_images }} 张: 训练{{
+                      dataset.train_images
+                    }}
+                    验证{{ dataset.val_images }})
+                  </div>
+                  <div v-else class="text-sm opacity-60">
+                    {{ dataset.identifier }} ({{ dataset.image_count }} 张图片)
                   </div>
                 </div>
               </div>
               <div v-if="editingDatasetIdentifier !== dataset.identifier" class="flex gap-2">
-                <button 
+                <button
                   @click="handleEditDataset(dataset.identifier)"
                   class="btn btn-sm btn-ghost"
                   title="编辑名称"
                 >
                   ✏️
                 </button>
-                <button 
+                <button
                   @click="showDeleteConfirm(dataset.identifier)"
                   class="btn btn-sm btn-error btn-ghost"
                   title="删除数据集"
@@ -619,8 +687,14 @@
         </div>
 
         <div class="modal-action">
-          <button 
-            @click="showEditDatasetModal = false; editingDatasetIdentifier = ''; editingDatasetName = ''" 
+          <button
+            @click="
+              () => {
+                showEditDatasetModal = false
+                editingDatasetIdentifier = ''
+                editingDatasetName = ''
+              }
+            "
             class="btn"
           >
             关闭
@@ -634,21 +708,30 @@
       <div class="modal-box">
         <h3 class="font-bold text-lg">⚠️ 确认删除</h3>
         <p class="py-4">
-          确定要删除数据集 "<strong>{{ existingDatasets.find(d => d.identifier === deletingDatasetIdentifier)?.name }}</strong>" 吗？
-          <br><br>
-          <span class="text-error">此操作将删除数据集目录中的所有文件（包括 {{ existingDatasets.find(d => d.identifier === deletingDatasetIdentifier)?.image_count }} 张图片和标签文件），且无法恢复！</span>
+          确定要删除数据集 "<strong>{{
+            existingDatasets.find((d) => d.identifier === deletingDatasetIdentifier)?.name
+          }}</strong
+          >" 吗？ <br /><br />
+          <span class="text-error"
+            >此操作将删除数据集目录中的所有文件（包括
+            {{
+              existingDatasets.find((d) => d.identifier === deletingDatasetIdentifier)?.image_count
+            }}
+            张图片和标签文件），且无法恢复！</span
+          >
         </p>
         <div class="modal-action">
-          <button 
-            @click="confirmDeleteDataset" 
-            class="btn btn-error"
-            :disabled="deletingDataset"
-          >
+          <button @click="confirmDeleteDataset" class="btn btn-error" :disabled="deletingDataset">
             <span v-if="deletingDataset" class="loading loading-spinner loading-xs"></span>
             <span v-else>确认删除</span>
           </button>
-          <button 
-            @click="showDeleteConfirmModal = false; deletingDatasetIdentifier = ''" 
+          <button
+            @click="
+              () => {
+                showDeleteConfirmModal = false
+                deletingDatasetIdentifier = ''
+              }
+            "
             class="btn"
             :disabled="deletingDataset"
           >
@@ -658,8 +741,79 @@
       </div>
     </div>
 
+    <!-- 导出数据模态框 -->
+    <div v-if="downloadExportModal" class="modal modal-open">
+      <div class="modal-box max-w-md">
+        <h3 class="font-bold text-lg mb-6">📥 导出YOLO数据集</h3>
+
+        <div class="space-y-4">
+          <div class="form-group">
+            <label class="form-label">
+              <span class="label-icon">📁</span>
+              <span>选择数据集</span>
+            </label>
+            <select v-model="downloadingDataset" class="select select-bordered w-full">
+              <option value="">-- 请选择要导出的数据集 --</option>
+              <option
+                v-for="dataset in existingDatasets"
+                :key="dataset.identifier"
+                :value="dataset.identifier"
+              >
+                <template
+                  v-if="dataset.train_images !== undefined && dataset.val_images !== undefined"
+                >
+                  {{ dataset.name }} ({{ dataset.total_images }} 张: 训练{{
+                    dataset.train_images
+                  }}
+                  验证{{ dataset.val_images }})
+                </template>
+                <template v-else> {{ dataset.name }} ({{ dataset.image_count }} 张图片) </template>
+              </option>
+            </select>
+          </div>
+
+          <div v-if="downloadingDataset" class="bg-base-200 p-4 rounded-lg text-sm">
+            <div class="font-medium mb-2">📦 导出内容说明：</div>
+            <ul class="space-y-1 text-xs opacity-80">
+              <li>• 处理后的图片文件（填充缩放至640x640）</li>
+              <li>• YOLO格式标注文件（.txt）</li>
+              <li>• 数据集配置文件（train.yaml）</li>
+              <li>• 类名文件（classes.txt）</li>
+              <li>• 数据集信息文件</li>
+            </ul>
+            <div class="mt-2 text-xs opacity-60">
+              结构：<code class="bg-base-300 px-1 py-0.5 rounded"
+                >dataset_name/train/ & dataset_name/val/</code
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-action mt-6">
+          <button
+            @click="
+              () => {
+                downloadExportModal = false
+                downloadingDataset = ''
+              }
+            "
+            class="btn btn-ghost"
+          >
+            取消
+          </button>
+          <button
+            @click="downloadYoloDataset"
+            class="btn btn-primary"
+            :disabled="!downloadingDataset"
+          >
+            <span v-if="downloadingDataset">📥 下载数据集</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- 消息提示 -->
-    <div v-if="message" class="toast toast-top toast-center" style="z-index: 9999;">
+    <div v-if="message" class="toast toast-top toast-center" style="z-index: 9999">
       <div :class="['alert', messageType]">
         <span>{{ message }}</span>
       </div>
@@ -669,7 +823,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { API_BASE_URL } from '@/config'
+import axios from 'axios'
 import ImagePreviewModal from '@/components/ImagePreviewModal.vue'
 
 interface Frame {
@@ -680,7 +834,7 @@ interface Frame {
   annotation_count?: number
   class_names?: string[]
   dataset_identifier?: string
-  datasets?: Array<{identifier: string, name: string}>
+  datasets?: Array<{ identifier: string; name: string }>
 }
 
 interface Class {
@@ -707,10 +861,21 @@ const yoloExportForm = ref({
   name: '',
   identifier: '',
   mode: 'new' as 'new' | 'append',
-  existingDataset: ''
+  existingDataset: '',
 })
 const yoloExporting = ref(false)
-const existingDatasets = ref<Array<{identifier: string, name: string, image_count: number}>>([])
+const downloadExportModal = ref(false)
+const downloadingDataset = ref('')
+const existingDatasets = ref<
+  Array<{
+    identifier: string
+    name: string
+    image_count: number
+    train_images?: number
+    val_images?: number
+    total_images?: number
+  }>
+>([])
 const batchAssignDataset = ref('')
 const batchAssigning = ref(false)
 const editItem = ref<Frame | null>(null)
@@ -730,7 +895,7 @@ const filters = ref({
   className: '',
   dateRange: '',
   search: '',
-  datasetIdentifier: ''
+  datasetIdentifier: '',
 })
 
 // 分页
@@ -739,11 +904,11 @@ const pageSize = ref(20)
 
 // 统计信息
 const totalCount = computed(() => allData.value.length)
-const annotatedCount = computed(() => 
-  allData.value.filter(item => item.annotation_count && item.annotation_count > 0).length
+const annotatedCount = computed(
+  () => allData.value.filter((item) => item.annotation_count && item.annotation_count > 0).length,
 )
-const annotationRate = computed(() => 
-  totalCount.value > 0 ? Math.round((annotatedCount.value / totalCount.value) * 100) : 0
+const annotationRate = computed(() =>
+  totalCount.value > 0 ? Math.round((annotatedCount.value / totalCount.value) * 100) : 0,
 )
 
 // 视频多选功能
@@ -766,20 +931,20 @@ const filteredData = computed(() => {
 
   // 视频筛选（多选）
   if (selectedVideos.value.length > 0) {
-    data = data.filter(item => 
-      item.video_filename && selectedVideos.value.includes(item.video_filename)
+    data = data.filter(
+      (item) => item.video_filename && selectedVideos.value.includes(item.video_filename),
     )
   }
-  
+
   // 保持旧的单选筛选逻辑（向后兼容）
   if (filters.value.videoFilename) {
-    data = data.filter(item => item.video_filename === filters.value.videoFilename)
+    data = data.filter((item) => item.video_filename === filters.value.videoFilename)
   }
 
   // 类名筛选
   if (filters.value.className) {
-    data = data.filter(item => 
-      item.class_names && item.class_names.includes(filters.value.className)
+    data = data.filter(
+      (item) => item.class_names && item.class_names.includes(filters.value.className),
     )
   }
 
@@ -787,7 +952,7 @@ const filteredData = computed(() => {
   if (filters.value.dateRange) {
     const now = Date.now() / 1000
     let threshold = 0
-    
+
     switch (filters.value.dateRange) {
       case 'today':
         threshold = now - 24 * 60 * 60
@@ -799,27 +964,28 @@ const filteredData = computed(() => {
         threshold = now - 30 * 24 * 60 * 60
         break
     }
-    
+
     if (threshold > 0) {
-      data = data.filter(item => item.created_at >= threshold)
+      data = data.filter((item) => item.created_at >= threshold)
     }
   }
 
   // 数据集筛选
   if (filters.value.datasetIdentifier) {
     if (filters.value.datasetIdentifier === 'unassigned') {
-      data = data.filter(item => !item.dataset_identifier)
+      data = data.filter((item) => !item.dataset_identifier)
     } else {
-      data = data.filter(item => item.dataset_identifier === filters.value.datasetIdentifier)
+      data = data.filter((item) => item.dataset_identifier === filters.value.datasetIdentifier)
     }
   }
 
   // 搜索筛选
   if (filters.value.search) {
     const search = filters.value.search.toLowerCase()
-    data = data.filter(item => 
-      item.filename.toLowerCase().includes(search) ||
-      (item.video_filename && item.video_filename.toLowerCase().includes(search))
+    data = data.filter(
+      (item) =>
+        item.filename.toLowerCase().includes(search) ||
+        (item.video_filename && item.video_filename.toLowerCase().includes(search)),
     )
   }
 
@@ -829,33 +995,29 @@ const filteredData = computed(() => {
 // 分页数据
 const totalPages = computed(() => Math.ceil(filteredData.value.length / pageSize.value))
 const startIndex = computed(() => (currentPage.value - 1) * pageSize.value)
-const endIndex = computed(() => Math.min(startIndex.value + pageSize.value, filteredData.value.length))
-const paginatedData = computed(() => 
-  filteredData.value.slice(startIndex.value, endIndex.value)
+const endIndex = computed(() =>
+  Math.min(startIndex.value + pageSize.value, filteredData.value.length),
 )
+const paginatedData = computed(() => filteredData.value.slice(startIndex.value, endIndex.value))
 
 // 全选
-const isAllSelected = computed(() => 
-  selectedItems.value.length > 0 && 
-  selectedItems.value.length === paginatedData.value.length
+const isAllSelected = computed(
+  () => selectedItems.value.length > 0 && selectedItems.value.length === paginatedData.value.length,
 )
 
 const toggleSelectAll = () => {
   if (isAllSelected.value) {
     selectedItems.value = []
   } else {
-    selectedItems.value = paginatedData.value.map(item => item.filename)
+    selectedItems.value = paginatedData.value.map((item) => item.filename)
   }
 }
 
 // 加载现有数据集列表
 const loadExistingDatasets = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/datasets`)
-    if (response.ok) {
-      const data = await response.json()
-      existingDatasets.value = data.datasets || []
-    }
+    const response = await axios.get('/api/datasets')
+    existingDatasets.value = response.data.datasets || []
   } catch (error) {
     console.error('加载数据集列表失败:', error)
   }
@@ -864,11 +1026,8 @@ const loadExistingDatasets = async () => {
 // 加载类名列表
 const loadClasses = async () => {
   try {
-    const classesResponse = await fetch(`${API_BASE_URL}/api/classes`)
-    if (classesResponse.ok) {
-      const classesData = await classesResponse.json()
-      classes.value = classesData.classes || []
-    }
+    const classesResponse = await axios.get('/api/classes')
+    classes.value = classesResponse.data.classes || []
   } catch (error) {
     console.error('加载类名列表失败:', error)
   }
@@ -878,44 +1037,19 @@ const loadClasses = async () => {
 const loadData = async () => {
   loading.value = true
   try {
-    // 加载截图数据
-    const framesResponse = await fetch(`${API_BASE_URL}/api/frames`)
-    if (!framesResponse.ok) throw new Error('获取数据失败')
-    const framesData = await framesResponse.json()
-    
-    // 为每个截图加载标注信息
-    const framesWithAnnotations = await Promise.all(
-      framesData.frames.map(async (frame: Frame) => {
-        try {
-          const annotationResponse = await fetch(
-            `${API_BASE_URL}/api/frames/${frame.filename}/annotations`
-          )
-          if (annotationResponse.ok) {
-            const annotationData = await annotationResponse.json()
-            return {
-              ...frame,
-              annotation_count: annotationData.annotations?.length || 0,
-              class_names: annotationData.annotations?.map((ann: any) => ann.class_name) || []
-            }
-          }
-        } catch (error) {
-          console.error(`加载 ${frame.filename} 标注失败:`, error)
-        }
-        return { ...frame, annotation_count: 0, class_names: [] }
-      })
-    )
-    
-    allData.value = framesWithAnnotations
-    
+    // 加载截图数据（包含标注信息）
+    const framesResponse = await axios.get('/api/frames')
+    allData.value = framesResponse.data.frames
+
     // 提取视频列表
     const videoSet = new Set<string>()
-    framesWithAnnotations.forEach(frame => {
+    allData.value.forEach((frame) => {
       if (frame.video_filename) {
         videoSet.add(frame.video_filename)
       }
     })
     videos.value = Array.from(videoSet).sort()
-    
+
     // 加载类名列表
     await loadClasses()
   } catch (error) {
@@ -928,13 +1062,13 @@ const loadData = async () => {
 
 // 获取类名颜色
 const getClassColor = (className: string) => {
-  const cls = classes.value.find(c => c.name === className)
+  const cls = classes.value.find((c) => c.name === className)
   return cls ? cls.color : '#3b82f6'
 }
 
 // 获取数据集名称
 const getDatasetName = (identifier: string) => {
-  const dataset = existingDatasets.value.find(d => d.identifier === identifier)
+  const dataset = existingDatasets.value.find((d) => d.identifier === identifier)
   return dataset ? dataset.name : identifier
 }
 
@@ -946,28 +1080,23 @@ const formatDate = (timestamp: number) => {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 
 // 预览图片
 const previewImage = async (item: Frame) => {
   previewItem.value = item
-  previewImageUrl.value = `${API_BASE_URL}${item.path}`
+  previewImageUrl.value = `${item.path}`
   previewImageInfo.value = {
     filename: item.filename,
-    path: item.path
+    path: item.path,
   }
-  
+
   // 加载标注数据
   try {
-    const response = await fetch(`${API_BASE_URL}/api/frames/${item.filename}/annotations`)
-    if (response.ok) {
-      const data = await response.json()
-      previewAnnotations.value = data.annotations || []
-    } else {
-      previewAnnotations.value = []
-    }
+    const response = await axios.get(`/api/frames/${item.filename}/annotations`)
+    previewAnnotations.value = response.data.annotations || []
   } catch (error) {
     console.error('加载标注失败:', error)
     previewAnnotations.value = []
@@ -982,21 +1111,12 @@ const closePreview = () => {
 
 const handleSaveAnnotations = async (annotations: any[]) => {
   if (!previewItem.value) return
-  
+
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/frames/${previewItem.value.filename}/annotations`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ annotations })
-      }
-    )
-    
-    if (!response.ok) throw new Error('保存标注失败')
-    
+    const response = await axios.post(`/api/frames/${previewItem.value.filename}/annotations`, {
+      annotations,
+    })
+
     showMessage('标注已保存', 'alert-success')
     previewAnnotations.value = annotations
     await loadData()
@@ -1009,7 +1129,7 @@ const handleSaveAnnotations = async (annotations: any[]) => {
 // 下载图片
 const downloadImage = (item: Frame) => {
   const link = document.createElement('a')
-  link.href = `${API_BASE_URL}${item.path}`
+  link.href = `${item.path}`
   link.download = item.filename
   link.click()
   showMessage('开始下载', 'alert-success')
@@ -1022,26 +1142,16 @@ const deleteImage = (item: Frame) => {
 
 const confirmDelete = async () => {
   if (!deleteItem.value) return
-  
+
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/delete-frame`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          filename: deleteItem.value.filename
-        })
-      }
-    )
-    
-    if (!response.ok) throw new Error('删除失败')
-    
+    const response = await axios.post('/api/delete-frame', {
+      filename: deleteItem.value.filename,
+    })
+
     showMessage('删除成功', 'alert-success')
     deleteItem.value = null
     await loadData()
+    await loadExistingDatasets() // 重新加载数据集列表，更新统计信息
   } catch (error) {
     console.error('删除失败:', error)
     showMessage('删除失败', 'alert-error')
@@ -1054,39 +1164,40 @@ const exportData = () => {
     showMessage('没有可导出的数据', 'alert-warning')
     return
   }
-  
-  const data = filteredData.value.map(item => ({
+
+  const data = filteredData.value.map((item) => ({
     文件名: item.filename,
     视频来源: item.video_filename || '未知',
     标注数量: item.annotation_count || 0,
     类名: (item.class_names || []).join(', '),
-    创建时间: formatDate(item.created_at)
+    创建时间: formatDate(item.created_at),
   }))
-  
+
   const csv = [
     Object.keys(data[0]!).join(','),
-    ...data.map(row => Object.values(row).join(','))
+    ...data.map((row) => Object.values(row).join(',')),
   ].join('\n')
-  
+
   const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
   link.download = `数据导出_${new Date().toISOString().split('T')[0]}.csv`
   link.click()
-  
+
   showMessage('导出成功', 'alert-success')
 }
 
 // YOLO导出相关函数
 const getExportFrameCount = () => {
   if (selectedVideos.value.length === 0) {
-    return allData.value.filter(item => item.annotation_count && item.annotation_count > 0).length
+    return allData.value.filter((item) => item.annotation_count && item.annotation_count > 0).length
   }
-  return allData.value.filter(item => 
-    item.annotation_count && 
-    item.annotation_count > 0 && 
-    item.video_filename && 
-    selectedVideos.value.includes(item.video_filename)
+  return allData.value.filter(
+    (item) =>
+      item.annotation_count &&
+      item.annotation_count > 0 &&
+      item.video_filename &&
+      selectedVideos.value.includes(item.video_filename),
   ).length
 }
 
@@ -1095,7 +1206,7 @@ const getExportAnnotationCount = () => {
     return allData.value.reduce((sum, item) => sum + (item.annotation_count || 0), 0)
   }
   return allData.value
-    .filter(item => item.video_filename && selectedVideos.value.includes(item.video_filename))
+    .filter((item) => item.video_filename && selectedVideos.value.includes(item.video_filename))
     .reduce((sum, item) => sum + (item.annotation_count || 0), 0)
 }
 
@@ -1121,7 +1232,7 @@ const handleYoloExport = async () => {
   yoloExporting.value = true
   try {
     const requestBody: any = {
-      video_filenames: selectedVideos.value.length > 0 ? selectedVideos.value : null
+      video_filenames: selectedVideos.value.length > 0 ? selectedVideos.value : null,
     }
 
     if (yoloExportForm.value.mode === 'new') {
@@ -1130,45 +1241,39 @@ const handleYoloExport = async () => {
       requestBody.append_mode = false
     } else {
       // 追加模式：使用现有数据集的标识符
-      const dataset = existingDatasets.value.find(d => d.identifier === yoloExportForm.value.existingDataset)
+      const dataset = existingDatasets.value.find(
+        (d) => d.identifier === yoloExportForm.value.existingDataset,
+      )
       requestBody.name = dataset?.name || '未命名数据集'
       requestBody.identifier = yoloExportForm.value.existingDataset
       requestBody.append_mode = true
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/export/yolo-dataset`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    })
+    const response = await axios.post('/api/export/yolo-dataset', requestBody)
+    const result = response.data
+    const message =
+      yoloExportForm.value.mode === 'new'
+        ? `数据集创建成功！共 ${result.total_images} 张图片，${result.total_annotations} 个标注`
+        : `数据集更新成功！已添加 ${result.total_images} 张图片，${result.total_annotations} 个标注`
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || '转换失败')
-    }
-
-    const result = await response.json()
-    const message = yoloExportForm.value.mode === 'new' 
-      ? `数据集创建成功！共 ${result.total_images} 张图片，${result.total_annotations} 个标注`
-      : `数据集更新成功！已添加 ${result.total_images} 张图片，${result.total_annotations} 个标注`
-    
     showMessage(message, 'alert-success')
-    
+
     // 关闭模态框并重置表单
     showYoloExportModal.value = false
     yoloExportForm.value.name = ''
     yoloExportForm.value.identifier = ''
     yoloExportForm.value.mode = 'new'
     yoloExportForm.value.existingDataset = ''
-    
+
     // 重新加载数据集列表和表格数据
     await loadExistingDatasets()
     await loadData()
   } catch (error: any) {
     console.error('YOLO导出失败:', error)
-    showMessage(error.message || 'YOLO数据集转换失败', 'alert-error')
+    showMessage(
+      error.response?.data?.detail || error.message || 'YOLO数据集转换失败',
+      'alert-error',
+    )
   } finally {
     yoloExporting.value = false
   }
@@ -1178,35 +1283,21 @@ const handleYoloExport = async () => {
 const editDatasets = (item: Frame) => {
   editItem.value = item
   // 初始化已选中的数据集
-  editSelectedDatasets.value = item.datasets?.map(d => d.identifier) || []
+  editSelectedDatasets.value = item.datasets?.map((d) => d.identifier) || []
 }
 
 // 保存数据集编辑
 const handleSaveDatasets = async () => {
   if (!editItem.value) return
-  
+
   editSaving.value = true
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/frames/${editItem.value.filename}/datasets`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          dataset_identifiers: editSelectedDatasets.value
-        })
-      }
-    )
-    
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || '保存失败')
-    }
-    
+    const response = await axios.post(`/api/frames/${editItem.value.filename}/datasets`, {
+      dataset_identifiers: editSelectedDatasets.value,
+    })
+
     showMessage('数据集归属已更新', 'alert-success')
-    
+
     // 关闭模态框并重新加载数据
     editItem.value = null
     editSelectedDatasets.value = []
@@ -1214,7 +1305,7 @@ const handleSaveDatasets = async () => {
     await loadExistingDatasets()
   } catch (error: any) {
     console.error('保存数据集失败:', error)
-    showMessage(error.message || '保存数据集失败', 'alert-error')
+    showMessage(error.response?.data?.detail || error.message || '保存数据集失败', 'alert-error')
   } finally {
     editSaving.value = false
   }
@@ -1222,7 +1313,7 @@ const handleSaveDatasets = async () => {
 
 // 编辑数据集
 const handleEditDataset = (identifier: string) => {
-  const dataset = existingDatasets.value.find(d => d.identifier === identifier)
+  const dataset = existingDatasets.value.find((d) => d.identifier === identifier)
   if (dataset) {
     editingDatasetIdentifier.value = identifier
     editingDatasetName.value = dataset.name
@@ -1238,36 +1329,22 @@ const handleSaveDatasetName = async () => {
 
   savingDataset.value = true
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/datasets/${editingDatasetIdentifier.value}`,
-      {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: editingDatasetName.value
-        })
-      }
-    )
+    const response = await axios.put(`/api/datasets/${editingDatasetIdentifier.value}`, {
+      name: editingDatasetName.value,
+    })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || '保存失败')
-    }
-
-    const result = await response.json()
+    const result = response.data
     showMessage(result.message || '数据集名称已更新', 'alert-success')
-    
+
     // 重置编辑状态
     editingDatasetIdentifier.value = ''
     editingDatasetName.value = ''
-    
+
     // 重新加载数据集列表
     await loadExistingDatasets()
   } catch (error: any) {
     console.error('保存数据集失败:', error)
-    showMessage(error.message || '保存数据集失败', 'alert-error')
+    showMessage(error.response?.data?.detail || error.message || '保存数据集失败', 'alert-error')
   } finally {
     savingDataset.value = false
   }
@@ -1285,31 +1362,21 @@ const confirmDeleteDataset = async () => {
 
   deletingDataset.value = true
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/datasets/${deletingDatasetIdentifier.value}`,
-      {
-        method: 'DELETE'
-      }
-    )
+    const response = await axios.delete(`/api/datasets/${deletingDatasetIdentifier.value}`)
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || '删除失败')
-    }
-
-    const result = await response.json()
+    const result = response.data
     showMessage(result.message || '数据集已删除', 'alert-success')
-    
+
     // 关闭确认对话框并重置
     showDeleteConfirmModal.value = false
     deletingDatasetIdentifier.value = ''
-    
+
     // 重新加载数据集列表和表格数据
     await loadExistingDatasets()
     await loadData()
   } catch (error: any) {
     console.error('删除数据集失败:', error)
-    showMessage(error.message || '删除数据集失败', 'alert-error')
+    showMessage(error.response?.data?.detail || error.message || '删除数据集失败', 'alert-error')
   } finally {
     deletingDataset.value = false
   }
@@ -1324,34 +1391,57 @@ const handleBatchAssign = async () => {
 
   batchAssigning.value = true
   try {
-    const response = await fetch(`${API_BASE_URL}/api/frames/batch-assign-dataset`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        filenames: selectedItems.value,
-        dataset_identifier: batchAssignDataset.value
-      })
+    const response = await axios.post('/api/frames/batch-assign-dataset', {
+      filenames: selectedItems.value,
+      dataset_identifier: batchAssignDataset.value,
     })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.detail || '批量分配失败')
-    }
-
-    const result = await response.json()
+    const result = response.data
     showMessage(`成功分配 ${result.updated_count} 张图片到数据集`, 'alert-success')
-    
+
     // 清空选择并重新加载数据
     selectedItems.value = []
     batchAssignDataset.value = ''
     await loadData()
   } catch (error: any) {
     console.error('批量分配失败:', error)
-    showMessage(error.message || '批量分配失败', 'alert-error')
+    showMessage(error.response?.data?.detail || error.message || '批量分配失败', 'alert-error')
   } finally {
     batchAssigning.value = false
+  }
+}
+
+const downloadYoloDataset = async () => {
+  if (!downloadingDataset.value) return
+
+  try {
+    const response = await axios.get(`/api/export/yolo-dataset-zip/${downloadingDataset.value}`, {
+      responseType: 'blob',
+    })
+
+    // 创建下载链接
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+
+    const filename =
+      response.headers['content-disposition']?.split("filename*=UTF-8''")[1] || 'dataset.zip'
+    link.setAttribute('download', decodeURIComponent(filename))
+
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    window.URL.revokeObjectURL(url)
+
+    showMessage('数据集导出成功', 'alert-success')
+
+    // 关闭模态框
+    downloadExportModal.value = false
+    downloadingDataset.value = ''
+  } catch (error: any) {
+    console.error('导出数据集失败:', error)
+    showMessage(error.response?.data?.detail || error.message || '导出数据集失败', 'alert-error')
   }
 }
 
@@ -1365,9 +1455,13 @@ const showMessage = (msg: string, type: string = 'alert-info') => {
 }
 
 // 监听筛选变化，重置到第一页
-watch(filters, () => {
-  currentPage.value = 1
-}, { deep: true })
+watch(
+  filters,
+  () => {
+    currentPage.value = 1
+  },
+  { deep: true },
+)
 
 onMounted(() => {
   loadData()
@@ -1431,21 +1525,21 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  
+
   /* 自定义滚动条 */
   &::-webkit-scrollbar {
     width: 8px;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.05);
     border-radius: 4px;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: rgba(96, 165, 250, 0.5);
     border-radius: 4px;
-    
+
     &:hover {
       background: rgba(96, 165, 250, 0.7);
     }
@@ -1500,14 +1594,14 @@ onMounted(() => {
   background: white;
   cursor: pointer;
   transition: all 0.3s ease;
-  
+
   &:hover {
     border-color: rgba(59, 130, 246, 0.5);
     background: rgba(59, 130, 246, 0.05);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
-  
+
   &.mode-option-active {
     border-color: rgb(59, 130, 246);
     background: rgba(59, 130, 246, 0.1);
@@ -1583,7 +1677,7 @@ onMounted(() => {
   background: rgba(59, 130, 246, 0.05);
   border-radius: 8px;
   border-left: 3px solid rgba(59, 130, 246, 0.5);
-  
+
   code {
     background: rgba(59, 130, 246, 0.1);
     padding: 2px 8px;
@@ -1608,7 +1702,7 @@ onMounted(() => {
   border-radius: 16px;
   border: 2px solid rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
-  
+
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);

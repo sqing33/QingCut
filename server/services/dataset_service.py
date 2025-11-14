@@ -27,7 +27,14 @@ async def get_all_datasets() -> List[Dict[str, Any]]:
             
             # 读取数据集信息
             name = dataset_dir.name
-            image_count = len(list(images_dir.glob("*.png"))) if images_dir.exists() else 0
+
+            # 分别统计训练集和验证集的图片数量
+            train_images_dir = dataset_dir / "train" / "images"
+            val_images_dir = dataset_dir / "val" / "images"
+
+            train_image_count = len(list(train_images_dir.glob("*.png"))) if train_images_dir.exists() else 0
+            val_image_count = len(list(val_images_dir.glob("*.png"))) if val_images_dir.exists() else 0
+            total_image_count = train_image_count + val_image_count
             
             if info_file.exists():
                 try:
@@ -44,7 +51,10 @@ async def get_all_datasets() -> List[Dict[str, Any]]:
             datasets.append({
                 "identifier": dataset_dir.name,
                 "name": name,
-                "image_count": image_count
+                "image_count": total_image_count,  # 总图片数量
+                "train_images": train_image_count,  # 训练集图片数量
+                "val_images": val_image_count,      # 验证集图片数量
+                "total_images": total_image_count    # 总图片数量（兼容现有代码）
             })
     
     return datasets

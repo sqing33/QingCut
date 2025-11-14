@@ -25,6 +25,7 @@ async def get_all_classes(db: AsyncSession) -> List[Dict[str, Any]]:
         {
             "id": cls.id,
             "name": cls.name,
+            "name_en": cls.name_en,
             "color": cls.color,
             "created_at": cls.created_at.timestamp()
         }
@@ -35,6 +36,7 @@ async def get_all_classes(db: AsyncSession) -> List[Dict[str, Any]]:
 async def create_class(
     db: AsyncSession,
     name: str,
+    name_en: str,
     color: str = "#00ff00",
     group_id: Optional[int] = None
 ) -> Dict[str, Any]:
@@ -42,7 +44,8 @@ async def create_class(
     
     Args:
         db: 数据库会话
-        name: 类名
+        name: 中文类名
+        name_en: 英文类名
         color: 颜色
         group_id: 可选的组ID，创建时直接添加到组
     
@@ -52,6 +55,7 @@ async def create_class(
     # 创建类名
     db_class = Class(
         name=name,
+        name_en=name_en,
         color=color,
         created_at=datetime.now()
     )
@@ -73,6 +77,7 @@ async def create_class(
     return {
         "id": db_class.id,
         "name": db_class.name,
+        "name_en": db_class.name_en,
         "color": db_class.color,
         "created_at": db_class.created_at.timestamp()
     }
@@ -337,6 +342,7 @@ async def get_group_classes(db: AsyncSession, group_id: int) -> Dict[str, Any]:
                 {
                     "id": classes_dict[item.class_id].id,
                     "name": classes_dict[item.class_id].name,
+                    "name_en": classes_dict[item.class_id].name_en,
                     "color": classes_dict[item.class_id].color,
                     "order": item.order
                 }

@@ -20,6 +20,13 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
 }
 
+@mixin glass-panel-selection {
+  background: rgba(251, 191, 36, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 5px rgba(251, 191, 36, 0.8), inset 0 0 0 2px rgba(251, 191, 36, 1);
+}
+
 .glass-panel {
   @include glass-panel;
 }
@@ -30,4 +37,8 @@
 
 .glass-panel-light {
   @include glass-panel-light;
+}
+
+.glass-panel-selection {
+  @include glass-panel-selection;
 }
