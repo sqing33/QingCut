@@ -9,6 +9,9 @@ FRAME_DIR = UPLOAD_DIR / "frames"
 # 数据集目录
 DATASET_DIR = Path("dataset")
 
+# 训练输出目录
+TRAIN_OUTPUT_DIR = Path("train")
+
 # CORS 配置
 CORS_ORIGINS = ["*"]
 CORS_CREDENTIALS = True

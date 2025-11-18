@@ -20,8 +20,10 @@ DB_NAME = os.getenv("DB_NAME", "video_cut")
 DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # 创建异步引擎
-engine = create_async_engine(DATABASE_URL, echo=True)
-AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+engine = create_async_engine(DATABASE_URL, echo=False)
+AsyncSessionLocal = async_sessionmaker(engine,
+                                       class_=AsyncSession,
+                                       expire_on_commit=False)
 
 Base = declarative_base()
 
@@ -34,24 +36,30 @@ class Video(Base):
     filename = Column(String, unique=True, index=True, nullable=False)
     path = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime,
+                        default=datetime.utcnow,
+                        onupdate=datetime.utcnow,
+                        nullable=False)
 
     # 关系：一个视频有多个截图
-    frames = relationship("Frame", back_populates="video", cascade="all, delete-orphan")
+    frames = relationship("Frame",
+                          back_populates="video",
+                          cascade="all, delete-orphan")
 
 
 class Dataset(Base):
     """数据集表"""
     __tablename__ = "datasets"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     identifier = Column(String, unique=True, nullable=False, index=True)
     name = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    
+
     # 关系：一个数据集包含多个图片
-    frame_datasets = relationship("FrameDataset", back_populates="dataset", cascade="all, delete-orphan")
-    training_records = relationship("TrainingRecord", back_populates="dataset", cascade="all, delete-orphan")
+    frame_datasets = relationship("FrameDataset",
+                                  back_populates="dataset",
+                                  cascade="all, delete-orphan")
 
 
 class Frame(Base):
@@ -61,9 +69,12 @@ class Frame(Base):
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(String, unique=True, index=True, nullable=False)
     path = Column(String, nullable=False)
-    video_id = Column(Integer, ForeignKey("videos.id"), nullable=True)  # 允许为空（旧数据兼容）
-    class_id = Column(Integer, ForeignKey("classes.id"), nullable=True)  # 关联的类名ID
-    dataset_identifier = Column(String, nullable=True, index=True)  # 所属数据集标识符（保留用于向后兼容）
+    video_id = Column(Integer, ForeignKey("videos.id"),
+                      nullable=True)  # 允许为空（旧数据兼容）
+    class_id = Column(Integer, ForeignKey("classes.id"),
+                      nullable=True)  # 关联的类名ID
+    dataset_identifier = Column(String, nullable=True,
+                                index=True)  # 所属数据集标识符（保留用于向后兼容）
     width = Column(Integer, default=640)
     height = Column(Integer, default=640)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -74,18 +85,24 @@ class Frame(Base):
     # 关系：一个截图关联一个类名
     class_obj = relationship("Class")
     # 关系：一个图片可以属于多个数据集
-    frame_datasets = relationship("FrameDataset", back_populates="frame", cascade="all, delete-orphan")
+    frame_datasets = relationship("FrameDataset",
+                                  back_populates="frame",
+                                  cascade="all, delete-orphan")
 
 
 class FrameDataset(Base):
     """图片-数据集关联表（多对多）"""
     __tablename__ = "frame_datasets"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    frame_id = Column(Integer, ForeignKey("frames.id", ondelete="CASCADE"), nullable=False)
-    dataset_id = Column(Integer, ForeignKey("datasets.id", ondelete="CASCADE"), nullable=False)
+    frame_id = Column(Integer,
+                      ForeignKey("frames.id", ondelete="CASCADE"),
+                      nullable=False)
+    dataset_id = Column(Integer,
+                        ForeignKey("datasets.id", ondelete="CASCADE"),
+                        nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    
+
     # 关系
     frame = relationship("Frame", back_populates="frame_datasets")
     dataset = relationship("Dataset", back_populates="frame_datasets")
@@ -101,7 +118,9 @@ class ClassGroup(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # 关系：一个组包含多个类名
-    items = relationship("ClassGroupItem", back_populates="group", cascade="all, delete-orphan")
+    items = relationship("ClassGroupItem",
+                         back_populates="group",
+                         cascade="all, delete-orphan")
 
 
 class Class(Base):
@@ -109,13 +128,17 @@ class Class(Base):
     __tablename__ = "classes"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)  # 中文类名（如 "人", "汽车"） - 移除unique约束，因为不同组可以有同名类
-    name_en = Column(String, nullable=False)  # 英文类名（如 "person", "car"） - 用于YOLO训练
+    name = Column(String,
+                  nullable=False)  # 中文类名（如 "人", "汽车"） - 移除unique约束，因为不同组可以有同名类
+    name_en = Column(String,
+                     nullable=False)  # 英文类名（如 "person", "car"） - 用于YOLO训练
     color = Column(String, default="#00ff00")  # 显示颜色
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # 关系：类名可以属于多个组
-    group_items = relationship("ClassGroupItem", back_populates="class_obj", cascade="all, delete-orphan")
+    group_items = relationship("ClassGroupItem",
+                               back_populates="class_obj",
+                               cascade="all, delete-orphan")
 
 
 class ClassGroupItem(Base):
@@ -123,8 +146,12 @@ class ClassGroupItem(Base):
     __tablename__ = "class_group_items"
 
     id = Column(Integer, primary_key=True, index=True)
-    group_id = Column(Integer, ForeignKey("class_groups.id", ondelete="CASCADE"), nullable=False)
-    class_id = Column(Integer, ForeignKey("classes.id", ondelete="CASCADE"), nullable=False)
+    group_id = Column(Integer,
+                      ForeignKey("class_groups.id", ondelete="CASCADE"),
+                      nullable=False)
+    class_id = Column(Integer,
+                      ForeignKey("classes.id", ondelete="CASCADE"),
+                      nullable=False)
     order = Column(Integer, default=0)  # 在组内的排序
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -138,67 +165,17 @@ class VideoClass(Base):
     __tablename__ = "video_classes"
 
     id = Column(Integer, primary_key=True, index=True)
-    video_id = Column(Integer, ForeignKey("videos.id", ondelete="CASCADE"), nullable=False)
-    class_id = Column(Integer, ForeignKey("classes.id", ondelete="CASCADE"), nullable=False)
+    video_id = Column(Integer,
+                      ForeignKey("videos.id", ondelete="CASCADE"),
+                      nullable=False)
+    class_id = Column(Integer,
+                      ForeignKey("classes.id", ondelete="CASCADE"),
+                      nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # 关系
     video = relationship("Video", backref="class_associations")
     class_obj = relationship("Class")
-
-
-class TrainingRecord(Base):
-    """训练记录表 - 存储每次训练的总体信息"""
-    __tablename__ = "training_records"
-
-    id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(String, unique=True, nullable=False, index=True)
-    dataset_identifier = Column(String, ForeignKey("datasets.identifier"), nullable=False)
-    model_name = Column(String, nullable=False)
-    epochs = Column(Integer, nullable=False)
-    batch_size = Column(Integer, nullable=False)
-    image_size = Column(Integer, nullable=False)
-    status = Column(String, nullable=False)  # pending, running, completed, failed, cancelled
-    progress = Column(Integer, default=0)  # Overall progress 0-100
-    current_epoch = Column(Integer, default=0)
-    total_epochs = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    started_at = Column(DateTime, nullable=True)
-    completed_at = Column(DateTime, nullable=True)
-    duration_seconds = Column(Integer, nullable=True)  # 训练耗时（秒）
-    error_message = Column(String, nullable=True)
-    results_dir = Column(String, nullable=True)  # 训练结果（权重等）存储路径
-
-    # 关系
-    dataset = relationship("Dataset", back_populates="training_records")
-    epoch_metrics = relationship("TrainingEpochMetric", back_populates="training_record", cascade="all, delete-orphan")
-
-
-class TrainingEpochMetric(Base):
-    """训练轮次指标表 - 存储每一轮训练的详细指标"""
-    __tablename__ = "training_epoch_metrics"
-
-    id = Column(Integer, primary_key=True, index=True)
-    record_id = Column(Integer, ForeignKey("training_records.id", ondelete="CASCADE"), nullable=False)
-    epoch_number = Column(Integer, nullable=False)
-    
-    # YOLO 主要指标
-    train_loss = Column(Float, nullable=True)
-    val_loss = Column(Float, nullable=True)
-    precision = Column(Float, nullable=True)
-    recall = Column(Float, nullable=True)
-    map50 = Column(Float, nullable=True)  # mAP@0.5
-    map75 = Column(Float, nullable=True) # mAP@0.75
-    box_loss = Column(Float, nullable=True)
-    cls_loss = Column(Float, nullable=True)
-    
-    # 存放其他所有指标的JSON格式，保持灵活性
-    metrics_json = Column(JSON, nullable=True)
-    
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    
-    # 关系
-    training_record = relationship("TrainingRecord", back_populates="epoch_metrics")
 
 
 # 获取数据库会话
@@ -219,8 +196,7 @@ async def init_db():
 
 # 导出所有公共接口
 __all__ = [
-    "Base", "engine", "AsyncSessionLocal", "init_db", "get_db",
-    "Video", "Frame", "Class", "ClassGroup", "ClassGroupItem",
-    "VideoClass", "Dataset", "FrameDataset",
-    "TrainingRecord", "TrainingEpochMetric"
+    "Base", "engine", "AsyncSessionLocal", "init_db", "get_db", "Video",
+    "Frame", "Class", "ClassGroup", "ClassGroupItem", "VideoClass", "Dataset",
+    "FrameDataset"
 ]

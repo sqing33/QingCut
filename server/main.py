@@ -1,14 +1,24 @@
 """FastAPI 应用入口"""
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from config import (
-    UPLOAD_DIR, VIDEO_DIR, FRAME_DIR,
-    CORS_ORIGINS, CORS_CREDENTIALS, CORS_METHODS, CORS_HEADERS
-)
+# 导入matplotlib配置以解决中文显示警告
+try:
+    import utils.matplotlib_config
+except ImportError:
+    pass
+
+from config import (UPLOAD_DIR, VIDEO_DIR, FRAME_DIR, CORS_ORIGINS,
+                    CORS_CREDENTIALS, CORS_METHODS, CORS_HEADERS)
 from database import init_db
 from routers import videos, frames, classes, datasets, export, train
+
+# # 配置日志级别
+# logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+# logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
+# logging.getLogger("fastapi").setLevel(logging.WARNING)
 
 app = FastAPI()
 
@@ -27,7 +37,6 @@ FRAME_DIR.mkdir(parents=True, exist_ok=True)
 
 # 挂载静态文件目录
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
-app.mount("/train", StaticFiles(directory="train"), name="train")
 
 # 注册路由
 app.include_router(videos.router)
@@ -47,4 +56,12 @@ async def startup_event():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # 配置uvicorn日志
+    uvicorn_config = {
+        "host": "0.0.0.0",
+        "port": 8000,
+        "reload": True,
+        "log_level": "warning",  # 设置日志级别为warning
+        "access_log": False,  # 关闭访问日志
+    }
+    uvicorn.run("main:app", **uvicorn_config)
